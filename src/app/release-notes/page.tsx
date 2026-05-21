@@ -1,5 +1,15 @@
 const releases = [
   {
+    version: "Release v1.3",
+    date: "May 21, 2026",
+    notes: [
+      "Home page reworked into a country portal with a selector-based entry flow for Nepal, Serbia, and Zambia, with under-construction routes for non-live countries.",
+      "Header branding, country landing pages, and supporting content shells were simplified to match the new portal structure and cleaner navigation model.",
+      "Nepal release copy and CTAs were tightened so the landing page now emphasizes the country deepdive and current-release summary.",
+      "Persistent dark mode was added across the app, including themed analytics charts, improved tooltip contrast, and hydration-safe theme initialization.",
+    ],
+  },
+  {
     version: "Release v1.2",
     date: "May 21, 2026",
     notes: [
