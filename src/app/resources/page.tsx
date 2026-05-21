@@ -4,7 +4,7 @@ const resources = [
   {
     title: "Methodology and scoring notes",
     body:
-      "A full explanation of the current indicator framework, data processing path, scoring logic, and release limitations for the Nepal app.",
+      "A full explanation of the current indicator framework, data processing path, scoring logic, and release limitations for the current app.",
     href: "/methodology",
     cta: "Open methodology",
   },
@@ -18,14 +18,14 @@ const resources = [
   {
     title: "Release notes",
     body:
-      "A running log of what has already been implemented in the Nepal rebuild and how the product shell has evolved toward the reference.",
+      "A running log of what has already been implemented in the rebuild and how the product shell has evolved toward the reference.",
     href: "/release-notes",
     cta: "Review release notes",
   },
 ];
 
 const additionalResources = [
-  "The current Nepal release is built from the municipality admin CSV, the score CSV, the municipality boundary GeoJSON, and the indicator metadata workbook.",
+  "The current release is built from the municipality admin CSV, the score CSV, the municipality boundary GeoJSON, and the indicator metadata workbook.",
   "Indicator source links are surfaced directly in the app through the metadata panel rather than hidden in separate documentation.",
   "The current product scope is analytics-first; the reference AI decision-engine workflow is still intentionally out of scope.",
 ];
@@ -42,8 +42,8 @@ export default function ResourcesPage() {
         </h1>
         <p className="mt-5 max-w-4xl text-base leading-8 text-[var(--muted-foreground)]">
           This page follows the structure of the reference resources section
-          but is rewritten for the Nepal release. It points users to the pages
-          and materials that explain how the current product works.
+          but is rewritten for the current release. It points users to the
+          pages and materials that explain how the current product works.
         </p>
       </section>
 

@@ -26,14 +26,14 @@ export default function AboutPage() {
           About
         </p>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--foreground)]">
-          Understanding the Nepal Local Development Tracker
+          Understanding the Local Development Tracker
         </h1>
         <p className="mt-5 max-w-4xl text-base leading-8 text-[var(--muted-foreground)]">
           This page follows the reference app&apos;s long-form About structure,
-          but it is rewritten for the Nepal release and the current product
-          scope. It explains why the rebuild exists, what analytical questions
-          it is designed to answer, and how it differs from the original
-          Streamlit implementation.
+          but it is rewritten for the current product scope. It explains why
+          the rebuild exists, what analytical questions it is designed to
+          answer, and how it differs from the original Streamlit
+          implementation.
         </p>
       </section>
 
@@ -49,10 +49,10 @@ export default function AboutPage() {
             patterns, and supporting indicators that explain those differences.
           </p>
           <p>
-            This Nepal rebuild keeps that analytical pattern but replaces the
+            This rebuild keeps that analytical pattern but replaces the
             technical stack with Next.js, Supabase, Vercel, Plotly, and
-            MapLibre. The result is a public-facing analytics product that is
-            easier to evolve into a historical, deployment-ready web
+            MapLibre. The result is a public-facing analytics product that
+            is easier to evolve into a historical, deployment-ready web
             application.
           </p>
         </div>
@@ -64,9 +64,9 @@ export default function AboutPage() {
         </h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            The Nepal app visualizes municipality-level differences across
-            Prosperity, Livability, and Infrastructure. Rather than stopping at
-            a single composite number, it exposes the component scores,
+            The app visualizes municipality-level differences across
+            Prosperity, Livability, and Infrastructure. Rather than stopping
+            at a single composite number, it exposes the component scores,
             indicator metadata, and map context needed to interpret those
             scores responsibly.
           </p>
@@ -84,8 +84,8 @@ export default function AboutPage() {
             Product objective
           </h2>
           <p className="mt-4 text-sm leading-7 text-[var(--muted-foreground)]">
-            Provide a public, inspectable municipality analytics surface for
-            Nepal rather than a closed score dashboard.
+            Provide a public, inspectable municipality analytics surface
+            rather than a closed score dashboard.
           </p>
         </article>
         <article className="rounded-[1.5rem] border border-[var(--border-soft)] bg-white/80 p-6">
@@ -127,7 +127,7 @@ export default function AboutPage() {
 
           <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
             <h3 className="text-base font-semibold text-[var(--foreground)]">
-              Changed in the Nepal implementation
+              Changed in the current implementation
             </h3>
             <ul className="mt-4 space-y-2 pl-5 text-sm leading-7 text-[var(--muted-foreground)]">
               {changed.map((item) => (
@@ -145,9 +145,9 @@ export default function AboutPage() {
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
             Municipality comparison tools are only useful if users can inspect
-            the assumptions behind them. That is why the Nepal rebuild exposes
-            score drivers, raw indicator labels, source links, and release
-            context directly in the interface.
+            the assumptions behind them. That is why the current implementation
+            exposes score drivers, raw indicator labels, source links, and
+            release context directly in the interface.
           </p>
           <p>
             The goal is not to present a single definitive answer for local
@@ -164,7 +164,7 @@ export default function AboutPage() {
         </h2>
         <div className="mt-5 space-y-3 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            For questions about the current Nepal implementation, use the
+            For questions about the current implementation, use the
             methodology and resources pages first so the data model and source
             assumptions are clear.
           </p>

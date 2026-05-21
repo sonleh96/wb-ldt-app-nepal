@@ -11,7 +11,7 @@ const pillars = [
   {
     title: "Prosperity",
     body:
-      "Prosperity focuses on economic activity and development intensity. In the current Nepal release, it is represented through nighttime luminosity, built area development, tourism intensity, and agricultural land-related measures.",
+      "Prosperity focuses on economic activity and development intensity. In the current release, it is represented through nighttime luminosity, built area development, tourism intensity, and agricultural land-related measures.",
     items: [
       "Nighttime luminosity as a proxy for energy use and economic intensity.",
       "Per-capita and per-area luminosity measures for normalized comparison.",
@@ -64,7 +64,7 @@ const processingNotes = [
 
 const limitations = {
   data: [
-    "Only one historical year is currently loaded in the Nepal release.",
+    "Only one historical year is currently loaded in the current release.",
     "Boundary reconciliation is incomplete, so map coverage is limited to the intersection of analytics keys and boundary features.",
     "Some indicators have sparse coverage and should be interpreted carefully when comparing municipalities.",
   ],
@@ -74,7 +74,7 @@ const limitations = {
     "Cross-source differences in collection methods and resolution can affect comparability.",
   ],
   product: [
-    "The public Nepal rebuild currently focuses on analytics and maps rather than AI-assisted recommendations.",
+    "The public implementation currently focuses on analytics and maps rather than AI-assisted recommendations.",
     "The current release is read-only and does not yet include an automated public refresh workflow.",
   ],
 };
@@ -91,10 +91,10 @@ export default function MethodologyPage() {
         </h1>
         <p className="mt-5 max-w-4xl text-base leading-8 text-[var(--muted-foreground)]">
           This page follows the structure of the reference methodology section
-          but is rewritten for the Nepal release and the current public
-          analytics scope. It explains how municipality-level indicators are
-          assembled, standardized, and exposed through the app without carrying
-          over Serbia-specific or Western Balkans-specific content.
+          but is rewritten for the current public analytics scope. It explains
+          how municipality-level indicators are assembled, standardized, and
+          exposed through the app without carrying over Serbia-specific or
+          Western Balkans-specific content.
         </p>
       </section>
 
@@ -102,7 +102,7 @@ export default function MethodologyPage() {
         <h2 className="text-2xl font-semibold text-[var(--foreground)]">Overview</h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            The Nepal Local Development Tracker provides a municipality-level
+            The Local Development Tracker provides a municipality-level
             framework for comparing development conditions across three core
             pillars: Prosperity, Livability, and Infrastructure. The current
             release emphasizes public exploration through maps, scatterplots,
@@ -123,10 +123,10 @@ export default function MethodologyPage() {
         </h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            The Nepal release uses a pillar-based framework to assess municipal
-            development conditions and priorities. Indicators were selected to
-            support a practical public analytics product while remaining
-            grounded in available municipal-scale data.
+            The current release uses a pillar-based framework to assess
+            municipal development conditions and priorities. Indicators were
+            selected to support a practical public analytics product while
+            remaining grounded in available municipal-scale data.
           </p>
           <ul className="space-y-2 pl-5">
             {indicatorSelection.map((item) => (
@@ -134,9 +134,9 @@ export default function MethodologyPage() {
             ))}
           </ul>
           <p>
-            Unlike the reference app, the Nepal score structure does not use
-            intermediate dimensions. Indicators contribute directly to the three
-            pillars through their stored component scores.
+            Unlike the reference app, the current score structure does not use
+            intermediate dimensions. Indicators contribute directly to the
+            three pillars through their stored component scores.
           </p>
         </div>
       </section>
@@ -166,9 +166,10 @@ export default function MethodologyPage() {
         <h2 className="text-2xl font-semibold text-[var(--foreground)]">Data Sources</h2>
         <div className="mt-5 space-y-6 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            The Nepal release integrates multiple public and global data sources
-            to support scalable municipality-level analysis. Source links are
-            also attached directly to indicators within the application.
+            The current release integrates multiple public and global data
+            sources to support scalable municipality-level analysis. Source
+            links are also attached directly to indicators within the
+            application.
           </p>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -201,7 +202,7 @@ export default function MethodologyPage() {
             </h3>
             <ul className="mt-4 space-y-2 pl-5">
               <li>
-                Geographic resolution: municipality level across the Nepal
+                Geographic resolution: municipality level across the current
                 release.
               </li>
               <li>
@@ -247,10 +248,9 @@ export default function MethodologyPage() {
         </h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            The current Nepal release follows the official score CSV. Each
-            pillar score is an equal-weight arithmetic mean of its component
-            indicator scores, with null components skipped where data is
-            missing.
+            The current release follows the official score CSV. Each pillar
+            score is an equal-weight arithmetic mean of its component indicator
+            scores, with null components skipped where data is missing.
           </p>
           <p>
             In practice, that means the app does not infer new weights or apply
@@ -308,10 +308,10 @@ export default function MethodologyPage() {
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
             The reference product includes an AI-assisted decision-support
-            layer. The Nepal rebuild currently does not expose that workflow.
-            This release focuses on public analytics, including map comparison,
-            scatter-based municipality comparison, score-driver inspection, and
-            source transparency.
+            layer. The current implementation does not expose that workflow.
+            This release focuses on public analytics, including map
+            comparison, scatter-based municipality comparison, score-driver
+            inspection, and source transparency.
           </p>
           <p>
             If an AI-assisted recommendation layer is introduced later, it
@@ -368,10 +368,10 @@ export default function MethodologyPage() {
         </h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            Indicator descriptions are grounded in the Nepal metadata workbook,
-            and source links are surfaced directly in the application’s
-            indicator metadata panel. The charting and map views should be read
-            as decision-support tools for comparison and prioritization rather
+            Indicator descriptions are grounded in the metadata workbook, and
+            source links are surfaced directly in the application’s indicator
+            metadata panel. The charting and map views should be read as
+            decision-support tools for comparison and prioritization rather
             than as final policy prescriptions.
           </p>
           <p>

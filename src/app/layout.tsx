@@ -6,9 +6,9 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Nepal LDT",
+  title: "Local Development Tracker",
   description:
-    "Public municipality-level analytics for maps, scores, and indicator exploration in Nepal.",
+    "Public municipality-level analytics for maps, scores, and indicator exploration.",
 };
 
 const themeInitializer = `
