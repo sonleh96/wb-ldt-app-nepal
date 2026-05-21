@@ -9,11 +9,6 @@ import {
   saveDocumentContext,
   saveAiStageCache,
 } from "@/lib/ai/cache";
-import {
-  getProvincePlanContext,
-  getNationalPlanContext,
-  loadNationalPlanSources,
-} from "@/lib/ai/documents";
 import { searchWithExa, tryExtractWithExa } from "@/lib/ai/exa";
 import { generateOpenAiText, getOpenAiModel } from "@/lib/ai/openai";
 import {
@@ -361,6 +356,7 @@ async function getProvinceDocumentContext(context: AiPipelineContext) {
   }
 
   try {
+    const { getProvincePlanContext } = await import("@/lib/ai/documents");
     const direct = await getProvincePlanContext(context.municipality.province);
     return {
       document: direct.context,
@@ -485,6 +481,7 @@ async function runNationalPlanStage(
   context: AiPipelineContext,
   mode: AiStageRequestPayload["mode"],
 ) {
+  const { getNationalPlanContext, loadNationalPlanSources } = await import("@/lib/ai/documents");
   const selectedNationalSources = await loadNationalPlanSources(context.score.id);
   const inputFingerprint = buildStageFingerprint("national_plan_context", {
     scoreId: context.score.id,

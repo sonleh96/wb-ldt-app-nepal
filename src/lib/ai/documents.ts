@@ -4,8 +4,6 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { PDFParse } from "pdf-parse";
-
 import { loadDocumentContext, saveDocumentContext } from "@/lib/ai/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type {
@@ -18,6 +16,12 @@ const DOCUMENT_EXTRACTION_VERSION = "v2";
 
 let pdfWorkerConfigured = false;
 let pdfWorkerConfigurationPromise: Promise<void> | null = null;
+let pdfParseModulePromise: Promise<typeof import("pdf-parse")> | null = null;
+
+async function loadPdfParseModule() {
+  pdfParseModulePromise ??= import("pdf-parse");
+  return pdfParseModulePromise;
+}
 
 async function ensurePdfWorkerConfigured() {
   if (pdfWorkerConfigured) {
@@ -57,6 +61,7 @@ async function ensurePdfWorkerConfigured() {
     }
     const workerSource = `data:text/javascript;base64,${workerBuffer.toString("base64")}`;
 
+    const { PDFParse } = await loadPdfParseModule();
     PDFParse.setWorker(workerSource);
     pdfWorkerConfigured = true;
   })();
@@ -249,6 +254,7 @@ export async function loadNationalPlanSources(scoreId?: string): Promise<Nationa
 
 async function parsePdfFromBuffer(buffer: Buffer) {
   await ensurePdfWorkerConfigured();
+  const { PDFParse } = await loadPdfParseModule();
   const parser = new PDFParse({ data: buffer });
   const result = await parser.getText();
   await parser.destroy();
