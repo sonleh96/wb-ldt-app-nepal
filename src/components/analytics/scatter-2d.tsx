@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { PlotlyChart } from "@/components/analytics/plotly-chart";
+import { useTheme } from "@/components/theme/theme-provider";
 
 type Scatter2DCardProps = {
   xLabel: string;
@@ -28,6 +29,7 @@ export function Scatter2DCard({
   controls,
   points,
 }: Scatter2DCardProps) {
+  const { isDark } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,6 +46,12 @@ export function Scatter2DCard({
   const others = visiblePoints.filter(
     (point) => !point.selected && point.province !== selectedProvince,
   );
+  const gridColor = isDark ? "rgba(205,225,233,0.1)" : "rgba(24,37,44,0.08)";
+  const axisColor = isDark ? "rgba(205,225,233,0.28)" : "rgba(24,37,44,0.34)";
+  const tickColor = isDark ? "#96abb2" : "#5b6b74";
+  const textColor = isDark ? "#edf4f6" : "#18252c";
+  const chartSurface = isDark ? "rgba(22,32,38,0.96)" : "#ffffff";
+  const mutedSeries = isDark ? "rgba(205,225,233,0.54)" : "rgba(24,37,44,0.62)";
 
   return (
     <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-6 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
@@ -69,7 +77,7 @@ export function Scatter2DCard({
               text: others.map((point) => point.label),
               customdata: others.map((point) => [point.id, point.label, point.district, point.province]),
               marker: {
-                color: "rgba(24,37,44,0.62)",
+                color: mutedSeries,
                 size: 8,
               },
               hovertemplate:
@@ -116,7 +124,7 @@ export function Scatter2DCard({
             height: 720,
             margin: { l: 72, r: 28, t: 48, b: 72 },
             paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "#ffffff",
+            plot_bgcolor: chartSurface,
             hovermode: "closest",
             legend: {
               orientation: "h",
@@ -124,23 +132,26 @@ export function Scatter2DCard({
               y: 1.02,
               xanchor: "left",
               x: 0,
+              font: { color: textColor },
             },
             xaxis: {
-              title: { text: xLabel },
+              title: { text: xLabel, font: { color: textColor } },
               range: [0, 100],
               showgrid: true,
-              gridcolor: "rgba(24,37,44,0.08)",
+              gridcolor: gridColor,
               zeroline: false,
-              linecolor: "rgba(24,37,44,0.34)",
+              linecolor: axisColor,
+              tickfont: { color: tickColor },
               mirror: true,
             },
             yaxis: {
-              title: { text: yLabel },
+              title: { text: yLabel, font: { color: textColor } },
               range: [0, 100],
               showgrid: true,
-              gridcolor: "rgba(24,37,44,0.08)",
+              gridcolor: gridColor,
               zeroline: false,
-              linecolor: "rgba(24,37,44,0.34)",
+              linecolor: axisColor,
+              tickfont: { color: tickColor },
               mirror: true,
             },
             shapes: [
@@ -190,7 +201,7 @@ export function Scatter2DCard({
                 x1: 50,
                 y0: 0,
                 y1: 100,
-                line: { color: "rgba(24,37,44,0.55)", width: 1.5, dash: "dash" },
+                line: { color: isDark ? "rgba(205,225,233,0.36)" : "rgba(24,37,44,0.55)", width: 1.5, dash: "dash" },
               },
               {
                 type: "line",
@@ -198,7 +209,7 @@ export function Scatter2DCard({
                 x1: 100,
                 y0: 50,
                 y1: 50,
-                line: { color: "rgba(24,37,44,0.55)", width: 1.5, dash: "dash" },
+                line: { color: isDark ? "rgba(205,225,233,0.36)" : "rgba(24,37,44,0.55)", width: 1.5, dash: "dash" },
               },
             ],
           }}

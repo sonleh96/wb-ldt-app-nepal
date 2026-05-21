@@ -1,15 +1,10 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import Image from "next/image";
-import Link from "next/link";
 
 import ausLogo from "../../images/aus_logo.webp";
 import euLogo from "../../images/eu_logo.webp";
 import swissLogo from "../../images/swiss_logo.webp";
 import wbLogo from "../../images/wb_logo.webp";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
-import type { AnalyticsDataset } from "@/types/analytics";
+import { CountrySelector } from "@/components/home/country-selector";
 
 const capabilityCards = [
   {
@@ -30,167 +25,43 @@ const capabilityCards = [
   },
 ] as const;
 
-type HomeMetrics = {
-  municipalityCount: number;
-  provinceCount: number;
-  provincialPlanCount: number;
-  nationalPlanCount: number;
-  totalPopulation: number;
-  totalAreaKm2: number;
-};
-
-async function getHomeMetrics(): Promise<HomeMetrics> {
-  const datasetPath = path.join(process.cwd(), "src/generated/analytics-data.json");
-  const dataset = JSON.parse(await readFile(datasetPath, "utf8")) as AnalyticsDataset;
-
-  const municipalityCount = dataset.municipalities.length;
-  const provinceCount = new Set(
-    dataset.municipalities.map((municipality) => municipality.province),
-  ).size;
-  const totalPopulation = dataset.municipalities.reduce((sum, municipality) => {
-    return sum + (municipality.context.population ?? 0);
-  }, 0);
-  const rawTotalArea = dataset.municipalities.reduce((sum, municipality) => {
-    return sum + (municipality.context.totalLandAreaKm2 ?? 0);
-  }, 0);
-  const totalAreaKm2 = rawTotalArea > 1_000_000 ? rawTotalArea / 1_000_000 : rawTotalArea;
-
-  let provincialPlanCount = 0;
-  let nationalPlanCount = 0;
-
-  try {
-    const supabase = getSupabaseServerClient().schema("analytics");
-    const { data, error } = await supabase
-      .from("plan_document_sources")
-      .select("plan_level, province")
-      .eq("country", "Nepal")
-      .eq("source_sheet", "Nepal")
-      .eq("is_active", true);
-
-    if (!error) {
-      provincialPlanCount = new Set(
-        (data ?? [])
-          .filter((row) => row.plan_level === "province" && typeof row.province === "string")
-          .map((row) => row.province),
-      ).size;
-      nationalPlanCount = (data ?? []).filter((row) => row.plan_level === "national").length;
-    }
-  } catch {
-    nationalPlanCount = 0;
-    provincialPlanCount = 0;
-  }
-
-  return {
-    municipalityCount,
-    provinceCount,
-    provincialPlanCount,
-    nationalPlanCount,
-    totalPopulation,
-    totalAreaKm2,
-  };
-}
-
-export default async function Home() {
-  const metrics = await getHomeMetrics();
-  const populationLabel = new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
-  }).format(metrics.totalPopulation);
-  const totalAreaLabel = new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 1,
-  }).format(metrics.totalAreaKm2);
-
+export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
-      <section className="border-b border-[var(--border-soft)] bg-[radial-gradient(circle_at_top,_rgba(17,138,178,0.16),_transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.8),rgba(245,241,232,0.42))]">
+      <section className="border-b border-[var(--border-soft)] bg-[radial-gradient(circle_at_top,var(--hero-glow),transparent_38%),linear-gradient(180deg,var(--hero-wash-start),var(--hero-wash-end))]">
         <div className="mx-auto flex w-full max-w-7xl flex-col px-6 py-14 sm:px-8 lg:px-12 lg:py-20">
-          <span className="inline-flex w-fit rounded-full border border-[var(--border-strong)] bg-white/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted-foreground)] shadow-sm backdrop-blur">
-            Local Development Tracker
-          </span>
           <h1 className="mt-8 max-w-6xl text-4xl font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
-            Interactive and data-driven Public Investment Management solution for Nepal
+            Harness Big Data and AI
+            <br />
+            to empower Local PIM Decisions
           </h1>
-          <p className="mt-6 max-w-5xl text-base leading-8 text-[var(--muted-foreground)] sm:text-lg">
-            Leveraging geospatial data and advanced analytics to rank municipalities across Nepal, the Local Development Tracker, part of the World Bank&apos;s Geospatial Planning &amp; Budgeting Platform (GPBP), helps policymakers identify communities facing the greatest development challenges. This tool reveals the drivers behind these challenges, enabling informed decisions to promote prosperity, livability, and sustainable infrastructure development where it&apos;s needed most.
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/analytics"
-              className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-medium text-white shadow-[0_12px_28px_rgba(17,138,178,0.24)] transition-transform hover:-translate-y-0.5 hover:brightness-95"
-            >
-              Launch the App
-            </Link>
-            <Link
-              href="/about"
-              className="inline-flex items-center justify-center rounded-full border border-[var(--border-strong)] bg-white/75 px-6 py-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-white"
-            >
-              Read the Context
-            </Link>
+          <div className="mt-6 max-w-5xl space-y-4 text-base leading-8 text-[var(--muted-foreground)] sm:text-lg">
+            <p>
+              The GPB LDT is designed to help decision-makers at national and sub-national levels
+              prioritize measures, including public investment and asset management, to strengthen
+              local economic development (LED). The LDT allows for a focus on up to two levels of
+              sub-national governments, for example provinces and districts.
+            </p>
+            <p>
+              The GPB LDT enables rapid analysis of key sub-national development indicators across
+              the dimensions of Prosperity, Livability, and Infrastructure. The composite measures
+              are proxied by the best available big data, ranging from satellite nightlights to
+              climate change risk modeling layers.
+            </p>
+            <p>
+              The GPB LDT provides a Generative AI complication and analysis of all available local
+              development strategies, and how these benchmark against existing Prosperity,
+              Livability, and Infrastructure measures.
+            </p>
           </div>
+          <CountrySelector />
         </div>
       </section>
 
-      <section className="mx-auto mt-14 w-full max-w-7xl px-6 sm:px-8 lg:px-12">
-        <article className="rounded-[1.9rem] border border-[var(--border-strong)] bg-white/80 p-7 shadow-[0_18px_45px_rgba(39,62,71,0.08)]">
+      <section className="mx-auto mb-16 w-full max-w-7xl px-6 sm:px-8 lg:px-12">
+        <article className="rounded-[1.9rem] border border-[var(--border-soft)] bg-[linear-gradient(180deg,var(--panel-gradient-start),var(--panel-gradient-end))] p-7 shadow-[0_18px_45px_var(--surface-shadow)]">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-            Current release
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                Municipalities
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {metrics.municipalityCount}
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                Provinces covered
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {metrics.provinceCount}
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                Provincial plans available
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {metrics.provincialPlanCount}
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                National plans available
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {metrics.nationalPlanCount}
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                Total population
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {populationLabel}
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                Total area
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {totalAreaLabel} km2
-              </p>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section className="mx-auto mt-10 mb-16 w-full max-w-7xl px-6 sm:px-8 lg:px-12">
-        <article className="rounded-[1.9rem] border border-[var(--border-soft)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,245,238,0.96))] p-7 shadow-[0_18px_45px_rgba(39,62,71,0.08)]">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-            What this version includes
+            What the LDT provides
           </p>
           <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
             {capabilityCards.map((capability) => (

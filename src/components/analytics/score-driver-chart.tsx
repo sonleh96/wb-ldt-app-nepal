@@ -1,6 +1,7 @@
 "use client";
 
 import { PlotlyChart } from "@/components/analytics/plotly-chart";
+import { useTheme } from "@/components/theme/theme-provider";
 
 type ScoreDriverChartCardProps = {
   title: string;
@@ -27,6 +28,7 @@ export function ScoreDriverChartCard({
   title,
   rows,
 }: ScoreDriverChartCardProps) {
+  const { isDark } = useTheme();
   const validComponentCount = Math.max(
     rows.filter(
       (row) =>
@@ -74,6 +76,10 @@ export function ScoreDriverChartCard({
   const scoreLabel = title.replace(/ Score$/, "");
   const diffColor = totalDiff >= 0 ? "#54a24b" : "#e45756";
   const diffSign = totalDiff >= 0 ? "+" : "";
+  const textColor = isDark ? "#edf4f6" : "#18252c";
+  const mutedColor = isDark ? "#96abb2" : "#5b6b74";
+  const gridColor = isDark ? "rgba(205,225,233,0.1)" : "rgba(24,37,44,0.08)";
+  const zeroLineColor = isDark ? "rgba(205,225,233,0.48)" : "rgba(91,107,116,0.8)";
 
   return (
     <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-6 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
@@ -131,25 +137,25 @@ export function ScoreDriverChartCard({
               x: 0.5,
               xanchor: "center",
               y: 0.96,
-              font: { size: 20 },
+              font: { size: 20, color: textColor },
             },
             xaxis: {
               title: {
                 text: "Impact on score (compared to the country average)",
-                font: { size: 14, color: "#18252c" },
+                font: { size: 14, color: textColor },
               },
-              tickfont: { size: 12, color: "#5b6b74" },
+              tickfont: { size: 12, color: mutedColor },
               range: [-axisExtent, axisExtent],
               zeroline: true,
               zerolinewidth: 2,
-              zerolinecolor: "rgba(91,107,116,0.8)",
+              zerolinecolor: zeroLineColor,
               showgrid: true,
               gridwidth: 1,
-              gridcolor: "rgba(24,37,44,0.08)",
+              gridcolor: gridColor,
             },
             yaxis: {
               title: { text: "" },
-              tickfont: { size: 14, color: "#18252c" },
+              tickfont: { size: 14, color: textColor },
               automargin: true,
             },
             annotations: [

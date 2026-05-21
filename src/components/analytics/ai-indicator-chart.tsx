@@ -1,6 +1,7 @@
 "use client";
 
 import { PlotlyChart } from "@/components/analytics/plotly-chart";
+import { useTheme } from "@/components/theme/theme-provider";
 import type { AiIndicatorSeries } from "@/lib/ai/types";
 
 type AiIndicatorChartProps = {
@@ -14,6 +15,12 @@ export function AiIndicatorChart({
   municipalityLabel,
   provinceLabel,
 }: AiIndicatorChartProps) {
+  const { isDark } = useTheme();
+  const textColor = isDark ? "#edf4f6" : "#18252c";
+  const gridColor = isDark ? "rgba(205,225,233,0.1)" : "rgba(24,37,44,0.08)";
+  const chartSurface = isDark ? "rgba(22,32,38,0.96)" : "#ffffff";
+  const mutedSeries = isDark ? "rgba(205,225,233,0.58)" : "rgba(24,37,44,0.7)";
+
   return (
     <section className="rounded-[1.5rem] border border-[var(--border-soft)] bg-white/80 p-4">
       <div className="flex flex-col gap-2">
@@ -55,8 +62,8 @@ export function AiIndicatorChart({
               name: "National average",
               x: series.points.map((point) => point.year),
               y: series.points.map((point) => point.nationalAverage),
-              marker: { color: "rgba(24,37,44,0.7)", size: 7 },
-              line: { color: "rgba(24,37,44,0.7)", width: 2, dash: "dash" },
+              marker: { color: mutedSeries, size: 7 },
+              line: { color: mutedSeries, width: 2, dash: "dash" },
             },
           ]}
           layout={{
@@ -64,7 +71,7 @@ export function AiIndicatorChart({
             height: 360,
             margin: { l: 58, r: 20, t: 28, b: 48 },
             paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "#ffffff",
+            plot_bgcolor: chartSurface,
             hovermode: "x unified",
             legend: {
               orientation: "h",
@@ -72,21 +79,24 @@ export function AiIndicatorChart({
               y: 1.02,
               xanchor: "left",
               x: 0,
+              font: { color: textColor },
             },
             xaxis: {
-              title: { text: "Year" },
+              title: { text: "Year", font: { color: textColor } },
               type: "category",
               showgrid: true,
-              gridcolor: "rgba(24,37,44,0.08)",
+              gridcolor: gridColor,
+              tickfont: { color: textColor },
             },
             yaxis: {
-              title: { text: "Score" },
+              title: { text: "Score", font: { color: textColor } },
               showgrid: true,
-              gridcolor: "rgba(24,37,44,0.08)",
+              gridcolor: gridColor,
               zeroline: false,
               range: [0, 100],
               tick0: 0,
               dtick: 20,
+              tickfont: { color: textColor },
             },
           }}
           config={{ responsive: true, displaylogo: false }}

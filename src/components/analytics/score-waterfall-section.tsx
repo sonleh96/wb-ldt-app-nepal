@@ -12,9 +12,9 @@ function formatValue(value: number | null, fractionDigits = 1) {
 
 function TooltipIcon({ text }: { text: string | null }) {
   return (
-    <span className="group relative inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-soft)] bg-white text-[11px] font-medium text-[var(--muted-foreground)]">
+    <span className="group relative inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-soft)] bg-[var(--surface)] text-[11px] font-medium text-[var(--muted-foreground)]">
       i
-      <span className="pointer-events-none absolute left-6 top-1/2 z-10 hidden w-64 -translate-y-1/2 rounded-2xl border border-[var(--border-soft)] bg-[var(--foreground)] px-3 py-2 text-left text-xs font-normal leading-5 text-white shadow-[0_18px_50px_rgba(39,62,71,0.28)] group-hover:block">
+      <span className="pointer-events-none absolute left-6 top-1/2 z-10 hidden w-64 -translate-y-1/2 rounded-2xl border border-[var(--border-soft)] bg-[var(--tooltip-bg)] px-3 py-2 text-left text-xs font-normal leading-5 text-[var(--tooltip-foreground)] shadow-[0_18px_50px_rgba(39,62,71,0.28)] group-hover:block">
         {text ?? "No description available."}
       </span>
     </span>

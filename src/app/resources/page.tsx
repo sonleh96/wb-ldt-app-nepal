@@ -100,24 +100,6 @@ export default function ResourcesPage() {
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-8 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
-        <h2 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-          Explore the Nepal LDT analytics
-        </h2>
-        <p className="mt-4 max-w-4xl text-sm leading-7 text-[var(--muted-foreground)]">
-          Launch the current municipality analytics experience to inspect the
-          map, compare municipalities, and review score drivers and source
-          metadata.
-        </p>
-        <div className="mt-6">
-          <Link
-            href="/analytics"
-            className="inline-flex items-center justify-center rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-medium text-[var(--background)] transition-transform hover:-translate-y-0.5"
-          >
-            Launch the App
-          </Link>
-        </div>
-      </section>
     </main>
   );
 }

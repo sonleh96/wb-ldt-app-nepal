@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { PlotlyChart } from "@/components/analytics/plotly-chart";
+import { useTheme } from "@/components/theme/theme-provider";
 
 type Scatter3DCardProps = {
   selectedProvince: string;
@@ -19,6 +20,7 @@ type Scatter3DCardProps = {
 };
 
 export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) {
+  const { isDark } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -35,6 +37,11 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
   const others = visiblePoints.filter(
     (point) => !point.selected && point.province !== selectedProvince,
   );
+  const chartSurface = isDark ? "rgba(22,32,38,0.96)" : "rgba(245,241,232,0.82)";
+  const gridColor = isDark ? "rgba(205,225,233,0.12)" : "rgba(24,37,44,0.12)";
+  const axisColor = isDark ? "rgba(205,225,233,0.2)" : "rgba(24,37,44,0.2)";
+  const textColor = isDark ? "#edf4f6" : "#18252c";
+  const mutedSeries = isDark ? "rgba(205,225,233,0.54)" : "rgba(24,37,44,0.58)";
 
   return (
     <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-6 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
@@ -60,7 +67,7 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
               text: others.map((point) => point.label),
               customdata: others.map((point) => [point.id, point.label, point.district, point.province]),
               marker: {
-                color: "rgba(24,37,44,0.58)",
+                color: mutedSeries,
                 size: 5,
               },
               hovertemplate:
@@ -115,29 +122,34 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
               y: 1.02,
               xanchor: "left",
               x: 0,
+              font: { color: textColor },
             },
             scene: {
               xaxis: {
-                title: { text: "Prosperity" },
+                title: { text: "Prosperity", font: { color: textColor } },
                 range: [0, 100],
-                backgroundcolor: "rgba(245,241,232,0.82)",
-                gridcolor: "rgba(24,37,44,0.12)",
-                zerolinecolor: "rgba(24,37,44,0.2)",
+                backgroundcolor: chartSurface,
+                gridcolor: gridColor,
+                zerolinecolor: axisColor,
+                tickfont: { color: textColor },
               },
               yaxis: {
-                title: { text: "Infrastructure" },
+                title: { text: "Infrastructure", font: { color: textColor } },
                 range: [0, 100],
-                backgroundcolor: "rgba(245,241,232,0.82)",
-                gridcolor: "rgba(24,37,44,0.12)",
-                zerolinecolor: "rgba(24,37,44,0.2)",
+                backgroundcolor: chartSurface,
+                gridcolor: gridColor,
+                zerolinecolor: axisColor,
+                tickfont: { color: textColor },
               },
               zaxis: {
-                title: { text: "Livability" },
+                title: { text: "Livability", font: { color: textColor } },
                 range: [0, 100],
-                backgroundcolor: "rgba(245,241,232,0.82)",
-                gridcolor: "rgba(24,37,44,0.12)",
-                zerolinecolor: "rgba(24,37,44,0.2)",
+                backgroundcolor: chartSurface,
+                gridcolor: gridColor,
+                zerolinecolor: axisColor,
+                tickfont: { color: textColor },
               },
+              bgcolor: "rgba(0,0,0,0)",
               aspectmode: "cube",
               camera: {
                 eye: { x: 1.5, y: 1.45, z: 0.95 },
