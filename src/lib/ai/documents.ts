@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 
 import { loadDocumentContext, saveDocumentContext } from "@/lib/ai/cache";
@@ -13,6 +14,7 @@ import type {
 } from "@/lib/ai/types";
 
 const DOCUMENT_EXTRACTION_VERSION = "v2";
+const nodeRequire = createRequire(import.meta.url);
 
 let pdfWorkerConfigured = false;
 let pdfWorkerConfigurationPromise: Promise<void> | null = null;
@@ -33,7 +35,12 @@ async function ensurePdfWorkerConfigured() {
   }
 
   pdfWorkerConfigurationPromise = (async () => {
+    const pdfParseEntrypoint = nodeRequire.resolve("pdf-parse");
+    const pdfParsePackageRoot = path.resolve(path.dirname(pdfParseEntrypoint), "../../..");
     const candidatePaths = [
+      path.join(pdfParsePackageRoot, "dist/pdf-parse/cjs/pdf.worker.mjs"),
+      path.join(pdfParsePackageRoot, "dist/worker/pdf.worker.mjs"),
+      path.join(pdfParsePackageRoot, "dist/pdf-parse/esm/pdf.worker.mjs"),
       path.join(process.cwd(), "node_modules/pdf-parse/dist/pdf-parse/cjs/pdf.worker.mjs"),
       path.join(process.cwd(), "node_modules/pdf-parse/dist/worker/pdf.worker.mjs"),
     ];
@@ -57,7 +64,7 @@ async function ensurePdfWorkerConfigured() {
     }
 
     if (!workerBuffer) {
-      throw new Error("Unable to locate the pdf-parse worker file under node_modules.");
+      throw new Error("Unable to locate the pdf-parse worker file in the deployed runtime.");
     }
     const workerSource = `data:text/javascript;base64,${workerBuffer.toString("base64")}`;
 
