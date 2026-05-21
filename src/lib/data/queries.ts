@@ -5,7 +5,6 @@ import path from "node:path";
 
 import { cache } from "react";
 
-import { loadProvincePlanCandidates } from "@/lib/ai/documents";
 import type {
   AiIndicatorSeries,
   AiPipelineContext,
@@ -1152,7 +1151,7 @@ export async function getAiPipelineContextForRequest({
   });
 
   const provincePlanCandidates = includeProvincePlanCandidates
-    ? await loadProvincePlanCandidates()
+    ? await import("@/lib/ai/documents").then((module) => module.loadProvincePlanCandidates())
     : [];
 
   const selectedScore =
