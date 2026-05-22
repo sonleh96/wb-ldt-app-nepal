@@ -10,12 +10,12 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingIncludes: {
-    "/api/ai/province-plan-context/route": [
+    "/api/ai/province-plan-context": [
       "./node_modules/@napi-rs/**/*",
       "./node_modules/pdf-parse/**/*",
       "./node_modules/pdfjs-dist/**/*",
     ],
-    "/api/ai/national-plan-context/route": [
+    "/api/ai/national-plan-context": [
       "./node_modules/@napi-rs/**/*",
       "./node_modules/pdf-parse/**/*",
       "./node_modules/pdfjs-dist/**/*",
