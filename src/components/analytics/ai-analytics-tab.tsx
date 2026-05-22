@@ -142,6 +142,29 @@ function getStringValue(value: unknown) {
   return typeof value === "string" ? value : null;
 }
 
+function toFailedStagePayload(stage: AiStageName, payload: unknown): AiStageResponsePayload {
+  const errorMessage =
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    typeof payload.error === "string"
+      ? payload.error
+      : "The AI stage request failed.";
+
+  return {
+    stage,
+    status: "failed",
+    cacheHit: false,
+    renderedOutput: null,
+    structuredOutput: {},
+    sourceReferences: [],
+    modelName: "n/a",
+    promptVersion: "n/a",
+    updatedAt: new Date().toISOString(),
+    errorMessage,
+  };
+}
+
 function PlanningEvidencePanel({
   title,
   result,
@@ -260,7 +283,10 @@ export function AiAnalyticsTab({
         }),
       });
 
-      const payload = (await response.json()) as AiStageResponsePayload;
+      const rawPayload = (await response.json()) as unknown;
+      const payload = response.ok
+        ? (rawPayload as AiStageResponsePayload)
+        : toFailedStagePayload(stage, rawPayload);
 
       if (
         options?.silentMissingCache &&

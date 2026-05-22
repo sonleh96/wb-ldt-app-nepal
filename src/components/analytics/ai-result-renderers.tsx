@@ -126,7 +126,9 @@ function ResultMeta({ result }: { result: AiStageResponsePayload }) {
 }
 
 function SourceList({ result }: { result: AiStageResponsePayload }) {
-  if (result.sourceReferences.length === 0 && !hasVisibleText(result.renderedOutput)) {
+  const sourceReferences = Array.isArray(result.sourceReferences) ? result.sourceReferences : [];
+
+  if (sourceReferences.length === 0 && !hasVisibleText(result.renderedOutput)) {
     return null;
   }
 
@@ -135,13 +137,13 @@ function SourceList({ result }: { result: AiStageResponsePayload }) {
       <summary className="cursor-pointer text-sm font-semibold text-[var(--foreground)]">
         Evidence and audit trail
       </summary>
-      {result.sourceReferences.length > 0 ? (
+      {sourceReferences.length > 0 ? (
         <div className="mt-4">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
             Sources
           </p>
           <ul className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]">
-            {result.sourceReferences.map((reference, index) => (
+            {sourceReferences.map((reference, index) => (
               <li key={`${reference.source}-${index}`}>
                 <span className="font-medium text-[var(--foreground)]">{reference.label}</span>
                 {" - "}
@@ -166,12 +168,14 @@ function SourceList({ result }: { result: AiStageResponsePayload }) {
 }
 
 function EvidenceChips({ result }: { result: AiStageResponsePayload }) {
-  if (result.sourceReferences.length === 0) {
+  const sourceReferences = Array.isArray(result.sourceReferences) ? result.sourceReferences : [];
+
+  if (sourceReferences.length === 0) {
     return null;
   }
 
-  const visibleSources = result.sourceReferences.slice(0, 4);
-  const remainingCount = result.sourceReferences.length - visibleSources.length;
+  const visibleSources = sourceReferences.slice(0, 4);
+  const remainingCount = sourceReferences.length - visibleSources.length;
 
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -542,8 +546,9 @@ function parseWebContextSections(text: string) {
 }
 
 function sourceCitationText(result: AiStageResponsePayload) {
-  if (result.sourceReferences.length === 0) return null;
-  return result.sourceReferences.map((reference) => reference.label).join("; ");
+  const sourceReferences = Array.isArray(result.sourceReferences) ? result.sourceReferences : [];
+  if (sourceReferences.length === 0) return null;
+  return sourceReferences.map((reference) => reference.label).join("; ");
 }
 
 type Recommendation = {
