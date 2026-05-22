@@ -2,10 +2,10 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { PlotlyChart } from "@/components/analytics/plotly-chart";
+import { Plotly3DChart } from "@/components/analytics/plotly-chart";
 import { useTheme } from "@/components/theme/theme-provider";
 
-type Scatter3DCardProps = {
+export type Scatter3DCardProps = {
   selectedProvince: string;
   points: Array<{
     id: string;
@@ -55,7 +55,7 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
         Rotate, pan, and zoom the point cloud. The selected municipality is red and the rest of its province is orange.
       </p>
       <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-[var(--border-soft)] bg-white/80">
-        <PlotlyChart
+        <Plotly3DChart
           data={[
             {
               type: "scatter3d",

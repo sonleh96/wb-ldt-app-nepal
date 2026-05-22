@@ -5,7 +5,7 @@ import { AnalyticsFilters } from "@/components/analytics/analytics-filters";
 import { ChoroplethMapCard } from "@/components/analytics/choropleth-map";
 import { MunicipalitySummaryCard } from "@/components/analytics/municipality-summary-card";
 import { Scatter2DCard } from "@/components/analytics/scatter-2d";
-import { Scatter3DCard } from "@/components/analytics/scatter-3d";
+import { Scatter3DLoader } from "@/components/analytics/scatter-3d-loader";
 import { ScoreWaterfallSection } from "@/components/analytics/score-waterfall-section";
 import { getAnalyticsPageData } from "@/lib/data/queries";
 
@@ -278,7 +278,7 @@ export default async function AnalyticsPage({
               }
               points={data.scatter2d.points}
             />
-            <Scatter3DCard
+            <Scatter3DLoader
               selectedProvince={data.municipality.province}
               points={data.scatter3d.points}
             />
