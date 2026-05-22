@@ -6,6 +6,7 @@ import { PlotlyChart } from "@/components/analytics/plotly-chart";
 import { useTheme } from "@/components/theme/theme-provider";
 
 export type SngDisplayRow = {
+  rowKey: string;
   municipality: string;
   province: string;
   population: number | null;
@@ -191,15 +192,31 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
   const { isDark } = useTheme();
   const [sort, setSort] = useState<SortState>({
     key: "population",
-    direction: "asc",
+    direction: "desc",
   });
+  const [searchQuery, setSearchQuery] = useState("");
   const textColor = isDark ? "#edf4f6" : "#18252c";
   const gridColor = isDark ? "rgba(205,225,233,0.1)" : "rgba(24,37,44,0.08)";
   const chartSurface = isDark ? "rgba(22,32,38,0.96)" : "#ffffff";
 
+  const filteredRows = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return rows;
+    }
+
+    return rows.filter((row) =>
+      exportColumns.some((column) => {
+        const value = column.render(row);
+        return value !== null && String(value).toLowerCase().includes(query);
+      }),
+    );
+  }, [rows, searchQuery]);
+
   const sortedRows = useMemo(() => {
-    return [...rows].sort((left, right) => compareValues(left, right, sort));
-  }, [rows, sort]);
+    return [...filteredRows].sort((left, right) => compareValues(left, right, sort));
+  }, [filteredRows, sort]);
 
   const curveRows = useMemo(() => buildCurveRows(rows), [rows]);
   const totalRows = curveRows.length;
@@ -361,11 +378,21 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
       </div>
 
       <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface)]">
-        <div className="flex flex-col gap-3 border-b border-[var(--border-soft)] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="flex flex-col gap-3 border-b border-[var(--border-soft)] p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <h3 className="text-xl font-semibold text-[var(--foreground)]">
               Municipality metrics
             </h3>
+            <label className="relative w-full sm:w-[18rem]">
+              <span className="sr-only">Search municipality metrics</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search table"
+                className="h-10 w-full rounded-full border border-[var(--border-soft)] bg-white px-4 text-sm text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--accent)]"
+              />
+            </label>
           </div>
           <button
             type="button"
@@ -419,11 +446,11 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-soft)]">
-              {sortedRows.map((row) => (
-                <tr key={`${row.province}-${row.municipality}`} className="align-top">
+              {sortedRows.length > 0 ? sortedRows.map((row) => (
+                <tr key={row.rowKey} className="align-top">
                   {tableColumns.map((column) => (
                     <td
-                      key={`${row.province}-${row.municipality}-${column.key}`}
+                      key={`${row.rowKey}-${column.key}`}
                       className={`px-4 py-3 text-sm text-[var(--foreground)] ${
                         column.align === "right"
                           ? "text-right"
@@ -450,7 +477,16 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
                     )}
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td
+                    colSpan={tableColumns.length + 1}
+                    className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]"
+                  >
+                    No municipality metrics match your search.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

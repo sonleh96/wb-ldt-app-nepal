@@ -134,12 +134,33 @@ async function getNepalHomeData(): Promise<NepalHomeData> {
     const { data, error } = await supabase
       .from("sng_display_table")
       .select(
-        "municipality, province, population, total_land_area_km2, infrastructure_score, livability_score, prosperity_score, pil_aggregate, has_development_strategy, strategy_level, link",
+        "municipality, district, province, population, total_land_area_km2, infrastructure_score, livability_score, prosperity_score, pil_aggregate, has_development_strategy, strategy_level, link",
       )
       .order("population", { ascending: true, nullsFirst: false });
 
     if (!error) {
-      sngRows = (data ?? []).map((row) => ({
+      const seenSngKeys = new Set<string>();
+      const dedupedRows = (data ?? []).filter((row) => {
+        const key = [
+          String(row.municipality ?? "").trim().toLowerCase(),
+          String(row.district ?? "").trim().toLowerCase(),
+          String(row.province ?? "").trim().toLowerCase(),
+        ].join("|");
+
+        if (seenSngKeys.has(key)) {
+          return false;
+        }
+
+        seenSngKeys.add(key);
+        return true;
+      });
+
+      sngRows = dedupedRows.map((row) => ({
+        rowKey: [
+          String(row.municipality ?? "").trim().toLowerCase(),
+          String(row.district ?? "").trim().toLowerCase(),
+          String(row.province ?? "").trim().toLowerCase(),
+        ].join("|"),
         municipality: String(row.municipality ?? ""),
         province: String(row.province ?? ""),
         population: row.population === null ? null : Number(row.population),
