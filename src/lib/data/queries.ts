@@ -633,10 +633,16 @@ export async function getAnalyticsPageData(
   rawSearchParams: Promise<SearchParams> | SearchParams,
 ): Promise<AnalyticsPageData> {
   const searchParams = await rawSearchParams;
+  const selectedTab = getSearchValue(searchParams.tab, "multi");
+  const shouldBuildMapData = selectedTab === "single";
+  const shouldBuildComponentData = selectedTab === "single" || selectedTab === "ai";
+  const shouldBuildAiSeries = selectedTab === "ai";
   const [baseData, localFallback, featureCollection] = await Promise.all([
     loadSupabaseBaseData(),
     loadLocalAnalyticsFallback(),
-    loadMapFeatureCollection(),
+    shouldBuildMapData
+      ? loadMapFeatureCollection()
+      : Promise.resolve({ type: "FeatureCollection", features: [] } satisfies MapFeatureCollection),
   ]);
 
   if (baseData.releases.length === 0) {
@@ -751,10 +757,12 @@ export async function getAnalyticsPageData(
 
   const [scoreValueRows, indicatorValueRows, scoreComponentValueRows, contextValueRows] = await Promise.all([
     loadScoreValuesForRelease(selectedRelease.id, selectedYear),
-    selectedMapMetric.kind === "indicator"
+    shouldBuildMapData && selectedMapMetric.kind === "indicator"
       ? loadIndicatorValuesForRelease(selectedRelease.id, selectedYear, selectedMapMetric.id)
       : Promise.resolve([] as IndicatorValueRow[]),
-    loadScoreComponentValuesForRelease(selectedRelease.id, selectedYear),
+    shouldBuildComponentData
+      ? loadScoreComponentValuesForRelease(selectedRelease.id, selectedYear)
+      : Promise.resolve([] as ScoreComponentValueRow[]),
     loadContextValuesForRelease(selectedRelease.id, selectedYear),
   ]);
 
@@ -824,50 +832,58 @@ export async function getAnalyticsPageData(
     municipalitiesForYear.map((municipality) => [municipality.compositeKey, municipality]),
   );
 
-  const mapFeatures = buildMapFeatures(
-    featureCollection,
-    municipalitiesByCompositeKey,
-    selectedMapMetric,
-  ).filter((feature) =>
-    selectedProvince === "all"
-      ? true
-      : feature.properties.Province === selectedProvince,
-  );
+  const mapFeatures = shouldBuildMapData
+    ? buildMapFeatures(
+        featureCollection,
+        municipalitiesByCompositeKey,
+        selectedMapMetric,
+      ).filter((feature) =>
+        selectedProvince === "all"
+          ? true
+          : feature.properties.Province === selectedProvince,
+      )
+    : [];
 
   const metricSummary = buildMetricSummary(provinceFilteredMunicipalities, selectedMapMetric);
-  const nationalComponentAverages = buildNationalComponentAverages(municipalitiesForYear);
+  const nationalComponentAverages = shouldBuildComponentData
+    ? buildNationalComponentAverages(municipalitiesForYear)
+    : {};
   const selectedScoreDefinition = inferScoreDefinition(scoreDefinitions, selectedMapMetric);
-  const scoreComponentDefinitions = selectedScoreDefinition.componentIds.map((componentId, index) => {
-    const indicatorId =
-      scoreComponentIndicatorMappings[
-        componentId as keyof typeof scoreComponentIndicatorMappings
-      ];
-    const indicatorDefinition = indicatorDefinitions.find(
-      (definition) => definition.id === indicatorId,
-    );
+  const scoreComponentDefinitions = shouldBuildComponentData
+    ? selectedScoreDefinition.componentIds.map((componentId, index) => {
+        const indicatorId =
+          scoreComponentIndicatorMappings[
+            componentId as keyof typeof scoreComponentIndicatorMappings
+          ];
+        const indicatorDefinition = indicatorDefinitions.find(
+          (definition) => definition.id === indicatorId,
+        );
 
-    return {
-      id: componentId,
-      label: selectedScoreDefinition.componentLabels[index] ?? componentId,
-      description: indicatorDefinition?.description ?? null,
-    };
-  });
+        return {
+          id: componentId,
+          label: selectedScoreDefinition.componentLabels[index] ?? componentId,
+          description: indicatorDefinition?.description ?? null,
+        };
+      })
+    : [];
 
-  const scoreDriverRows = selectedScoreDefinition.componentIds.map((componentId, index) => {
-    const municipalityValue = selectedMunicipality.scoreComponents[componentId] ?? null;
-    const nationalValue = nationalComponentAverages[componentId] ?? null;
+  const scoreDriverRows = shouldBuildComponentData
+    ? selectedScoreDefinition.componentIds.map((componentId, index) => {
+        const municipalityValue = selectedMunicipality.scoreComponents[componentId] ?? null;
+        const nationalValue = nationalComponentAverages[componentId] ?? null;
 
-    return {
-      componentId,
-      label: selectedScoreDefinition.componentLabels[index] ?? componentId,
-      municipalityValue,
-      nationalValue,
-      delta:
-        municipalityValue !== null && nationalValue !== null
-          ? Number((municipalityValue - nationalValue).toFixed(2))
-          : null,
-      };
-  });
+        return {
+          componentId,
+          label: selectedScoreDefinition.componentLabels[index] ?? componentId,
+          municipalityValue,
+          nationalValue,
+          delta:
+            municipalityValue !== null && nationalValue !== null
+              ? Number((municipalityValue - nationalValue).toFixed(2))
+              : null,
+        };
+      })
+    : [];
 
   const nationalScoreAverages: Record<string, number | null> = {};
   for (const definition of scoreDefinitions) {
@@ -876,7 +892,7 @@ export async function getAnalyticsPageData(
     );
   }
 
-  const waterfalls = scoreDefinitions.map((definition) => {
+  const waterfalls = shouldBuildComponentData ? scoreDefinitions.map((definition) => {
     const validComponentCount = Math.max(
       definition.componentIds.filter((componentId) => {
         const municipalityValue = selectedMunicipality.scoreComponents[componentId] ?? null;
@@ -934,23 +950,25 @@ export async function getAnalyticsPageData(
           : Number(totalDifference.toFixed(2)),
       rows,
     } satisfies ScoreWaterfallGroup;
-  });
+  }) : [];
 
   const aiScoreDefinition =
     scoreDefinitions.find((definition) => definition.id === selectedAiScore.id) ??
     scoreDefinitions[0];
-  const aiIndicatorSeries = await buildAiIndicatorSeries({
-    scoreDefinition: aiScoreDefinition,
-    municipality: selectedMunicipality,
-    releases: years
-      .map((year) => pickReleaseForYear(baseData.releases, year))
-      .filter((release): release is ReleaseRow => release !== null)
-      .map((release) => ({
-        id: release.id,
-        year: release.year,
-      })),
-    municipalities: municipalitiesForYear,
-  });
+  const aiIndicatorSeries = shouldBuildAiSeries
+    ? await buildAiIndicatorSeries({
+        scoreDefinition: aiScoreDefinition,
+        municipality: selectedMunicipality,
+        releases: years
+          .map((year) => pickReleaseForYear(baseData.releases, year))
+          .filter((release): release is ReleaseRow => release !== null)
+          .map((release) => ({
+            id: release.id,
+            year: release.year,
+          })),
+        municipalities: municipalitiesForYear,
+      })
+    : [];
   const aiIndicatorSeriesWithDescriptions = aiIndicatorSeries.map((series) => ({
     ...series,
     description:

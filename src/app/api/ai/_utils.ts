@@ -2,6 +2,29 @@ import { NextResponse } from "next/server";
 
 import type { AiStageRequestPayload } from "@/lib/ai/types";
 
+function isAiGenerationAllowed(request: Request) {
+  if (process.env.NODE_ENV !== "production") {
+    return true;
+  }
+
+  if (process.env.AI_GENERATION_ENABLED === "true") {
+    return true;
+  }
+
+  const adminToken = process.env.AI_ADMIN_TOKEN;
+  if (!adminToken) {
+    return false;
+  }
+
+  const authorization = request.headers.get("authorization");
+  const bearerToken = authorization?.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length)
+    : null;
+  const headerToken = request.headers.get("x-ai-admin-token");
+
+  return bearerToken === adminToken || headerToken === adminToken;
+}
+
 function serializeStageError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -41,6 +64,19 @@ export async function parseAiStageRequest(request: Request) {
           error: "Invalid AI stage request payload.",
         },
         { status: 400 },
+      ),
+    };
+  }
+
+  if (payload.mode !== "load_cached" && !isAiGenerationAllowed(request)) {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        {
+          error:
+            "AI generation is disabled. Enable it with AI_GENERATION_ENABLED=true or provide a valid AI admin token.",
+        },
+        { status: 403 },
       ),
     };
   }

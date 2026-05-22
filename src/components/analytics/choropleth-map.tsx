@@ -25,6 +25,33 @@ function formatMetricValue(value: number | null) {
   return value === null ? "No data" : value.toFixed(2);
 }
 
+function buildPopupContent(properties: SourceProperties, metricLabel: string) {
+  const container = document.createElement("div");
+  container.className = "space-y-1";
+
+  const title = document.createElement("div");
+  title.className = "font-semibold";
+  title.textContent = properties.Municipality;
+  container.appendChild(title);
+
+  const location = document.createElement("div");
+  location.className = "text-xs text-slate-500";
+  location.textContent = `${properties.District}, ${properties.Province}`;
+  container.appendChild(location);
+
+  const value = document.createElement("div");
+  value.className = "mt-2 text-sm";
+  value.textContent = `${metricLabel}: `;
+
+  const numericValue = document.createElement("span");
+  numericValue.className = "font-mono";
+  numericValue.textContent = formatMetricValue(properties.metricValue);
+  value.appendChild(numericValue);
+  container.appendChild(value);
+
+  return container;
+}
+
 function buildFillExpression(minimum: number | null, maximum: number | null) {
   if (minimum === null || maximum === null) {
     return ["literal", "#e7e7e7"] as unknown as ExpressionSpecification;
@@ -222,9 +249,7 @@ export function ChoroplethMapCard({
 
         popupRef.current
           ?.setLngLat(event.lngLat)
-          .setHTML(
-            `<div class="space-y-1"><div class="font-semibold">${properties.Municipality}</div><div class="text-xs text-slate-500">${properties.District}, ${properties.Province}</div><div class="mt-2 text-sm">${metricLabelRef.current}: <span class="font-mono">${formatMetricValue(properties.metricValue)}</span></div></div>`,
-          )
+          .setDOMContent(buildPopupContent(properties, metricLabelRef.current))
           .addTo(map);
       });
 
