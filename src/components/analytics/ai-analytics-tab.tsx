@@ -9,7 +9,11 @@ import {
   AiRecommendationsResult,
   AiSwotResult,
   AiWebContextResult,
+  buildRegionalIndicatorRows,
+  parseNarrativeSections,
+  sectionBodyForTitle,
 } from "@/components/analytics/ai-result-renderers";
+import type { RegionalIndicatorRow } from "@/components/analytics/ai-result-renderers";
 import { AiStageCard } from "@/components/analytics/ai-stage-card";
 import type {
   AiStageName,
@@ -28,11 +32,26 @@ const stageRouteMap: Record<AiStageName, string> = {
   investment_recommendations: "/api/ai/investment-recommendations",
 };
 
+const planningContextStages: AiStageName[] = [
+  "province_plan_context",
+  "national_plan_context",
+  "plan_alignment",
+];
+
 type AiAnalyticsTabProps = {
   release: AnalyticsPageData["release"];
   selected: AnalyticsPageData["selected"];
   municipality: AnalyticsPageData["municipality"];
   ai: AiTabData;
+};
+
+type WorkflowState = "complete" | "running" | "failed" | "blocked" | "optional" | "ready";
+
+type WorkflowStep = {
+  number: string;
+  title: string;
+  detail: string;
+  state: WorkflowState;
 };
 
 function StageButton({
@@ -59,6 +78,143 @@ function StageButton({
     >
       {label}
     </button>
+  );
+}
+
+function WorkflowProgressRail({ steps }: { steps: WorkflowStep[] }) {
+  const stateStyles: Record<WorkflowState, string> = {
+    complete: "border-[rgba(84,162,75,0.34)] bg-[rgba(84,162,75,0.10)] text-[#2f7a2a]",
+    running: "border-[rgba(17,138,178,0.42)] bg-[rgba(17,138,178,0.12)] text-[var(--accent)]",
+    failed: "border-[rgba(228,87,86,0.34)] bg-[rgba(228,87,86,0.10)] text-[#b23b3a]",
+    blocked: "border-[rgba(148,163,184,0.55)] bg-[rgba(148,163,184,0.16)] text-[var(--foreground)]",
+    optional: "border-[rgba(251,191,36,0.36)] bg-[rgba(251,191,36,0.10)] text-[#8a6416]",
+    ready: "border-[rgba(17,138,178,0.24)] bg-white/80 text-[var(--foreground)]",
+  };
+
+  const stateLabels: Record<WorkflowState, string> = {
+    complete: "Complete",
+    running: "Running",
+    failed: "Needs review",
+    blocked: "Blocked",
+    optional: "Optional",
+    ready: "Ready",
+  };
+
+  return (
+    <section className="rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-4 shadow-[0_14px_36px_rgba(39,62,71,0.06)]">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
+            Workflow state
+          </p>
+          <h3 className="mt-2 text-lg font-semibold text-[var(--foreground)]">
+            AI recommendation pipeline
+          </h3>
+        </div>
+        <p className="max-w-2xl text-sm leading-6 text-[var(--muted-foreground)]">
+          Scan what is ready, blocked, optional, or already grounded in cached evidence before opening result details.
+        </p>
+      </div>
+      <ol className="mt-4 grid gap-3 lg:grid-cols-5">
+        {steps.map((step) => (
+          <li
+            key={step.number}
+            className={`rounded-[1rem] border p-3 ${stateStyles[step.state]}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-xs font-semibold">
+                {step.number}
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                {stateLabels[step.state]}
+              </span>
+            </div>
+            <p className="mt-3 text-sm font-semibold">{step.title}</p>
+            <p className="mt-1 text-xs leading-5 opacity-80">{step.detail}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function getStringValue(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function PlanningEvidencePanel({
+  title,
+  result,
+}: {
+  title: string;
+  result?: AiStageResponsePayload;
+}) {
+  const extractedText = getStringValue(result?.structuredOutput.extractedText);
+  const summaryText = result?.renderedOutput ?? extractedText;
+  const proofText = [result?.renderedOutput, extractedText]
+    .filter((value): value is string => Boolean(value))
+    .join("\n\n--- Extracted source text ---\n\n");
+  const previewText = summaryText
+    ? summaryText.replace(/\s+/g, " ").trim().slice(0, 420)
+    : null;
+
+  return (
+    <div className="rounded-2xl border border-[var(--border-soft)] bg-white/70 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-[var(--foreground)]">{title}</h4>
+        {result ? (
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+              result.status === "completed"
+                ? "bg-[rgba(44,123,229,0.10)] text-[var(--accent)]"
+                : "bg-[rgba(214,64,69,0.10)] text-[var(--danger)]"
+            }`}
+          >
+            {result.status}
+          </span>
+        ) : null}
+      </div>
+      {result?.status === "failed" ? (
+        <p className="mt-3 text-sm text-[var(--danger)]">
+          {result.errorMessage ?? "This planning context stage failed."}
+        </p>
+      ) : previewText ? (
+        <p className="mt-3 text-sm leading-6 text-[var(--muted-foreground)]">
+          {previewText}
+          {summaryText && summaryText.length > previewText.length ? "..." : ""}
+        </p>
+      ) : (
+        <p className="mt-3 text-sm text-[var(--muted-foreground)]">
+          Not generated yet.
+        </p>
+      )}
+      {proofText ? (
+        <details className="mt-3 rounded-[1rem] border border-[var(--border-soft)] bg-white/80 p-3">
+          <summary className="cursor-pointer text-sm font-medium text-[var(--foreground)]">
+            Show full proof text
+          </summary>
+          <div className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap text-sm leading-7 text-[var(--foreground)]">
+            {proofText}
+          </div>
+        </details>
+      ) : null}
+      {result?.sourceReferences.length ? (
+        <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
+            Sources
+          </p>
+          <ul className="mt-2 space-y-2 text-xs leading-5 text-[var(--muted-foreground)]">
+            {result.sourceReferences.map((source, index) => (
+              <li key={`${source.type}-${source.label}-${source.source}-${index}`}>
+                <span className="font-medium text-[var(--foreground)]">{source.label}</span>
+                {" - "}
+                <span>{source.source}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -89,7 +245,7 @@ export function AiAnalyticsTab({
     stage: AiStageName,
     mode: "generate" | "regenerate" | "load_cached",
     options?: { silentMissingCache?: boolean },
-  ) {
+  ): Promise<AiStageResponsePayload | null> {
     setLoadingStages((current) => ({ ...current, [stage]: mode }));
 
     try {
@@ -111,13 +267,15 @@ export function AiAnalyticsTab({
         payload.status === "failed" &&
         payload.errorMessage?.toLowerCase().includes("no cached")
       ) {
-        return;
+        return null;
       }
 
       setStageResults((current) => ({
         ...current,
         [stage]: payload,
       }));
+
+      return payload;
     } finally {
       setLoadingStages((current) => {
         const next = { ...current };
@@ -128,22 +286,59 @@ export function AiAnalyticsTab({
   }
 
   const hasIndicatorNarrative = stageResults.indicator_narrative?.status === "completed";
-  const hasProvinceContext = stageResults.province_plan_context?.status === "completed";
-  const hasNationalContext = stageResults.national_plan_context?.status === "completed";
   const hasAlignment = stageResults.plan_alignment?.status === "completed";
+  const hasWebContext = stageResults.web_context_search?.status === "completed";
   const hasSwot = stageResults.swot_analysis?.status === "completed";
+  const isPlanningContextLoading = planningContextStages.some((stage) => loadingStages[stage]);
+  const hasAnyPlanningContextResult = planningContextStages.some((stage) => stageResults[stage]);
+
+  function getWorkflowState(
+    stages: AiStageName[],
+    options?: { blocked?: boolean; optional?: boolean },
+  ): WorkflowState {
+    if (stages.some((stage) => loadingStages[stage])) {
+      return "running";
+    }
+    if (stages.some((stage) => stageResults[stage]?.status === "failed")) {
+      return "failed";
+    }
+    if (stages.every((stage) => stageResults[stage]?.status === "completed")) {
+      return "complete";
+    }
+    if (options?.blocked) {
+      return "blocked";
+    }
+    if (options?.optional) {
+      return "optional";
+    }
+    return "ready";
+  }
+
+  async function runPlanningContext(mode: "generate" | "regenerate") {
+    const provinceContext = await runStage("province_plan_context", mode);
+    if (provinceContext?.status !== "completed") {
+      return;
+    }
+
+    const nationalContext = await runStage("national_plan_context", mode);
+    if (nationalContext?.status !== "completed") {
+      return;
+    }
+
+    await runStage("plan_alignment", mode);
+  }
 
   function buildStageActions(stage: AiStageName, disabled: boolean) {
     return (
       <>
         <StageButton
-          label={loadingStages[stage] ? "Working..." : "Generate"}
+          label={loadingStages[stage] ? "Working..." : "Run step"}
           onClick={() => void runStage(stage, "generate")}
           disabled={Boolean(loadingStages[stage]) || disabled}
           tone="primary"
         />
         <StageButton
-          label={loadingStages[stage] ? "Working..." : "Reload"}
+          label={loadingStages[stage] ? "Working..." : "Regenerate"}
           onClick={() => void runStage(stage, "regenerate")}
           disabled={Boolean(loadingStages[stage]) || disabled}
         />
@@ -158,13 +353,13 @@ export function AiAnalyticsTab({
 
     return hasResult ? (
       <StageButton
-        label={isLoading ? "Working..." : "Reload"}
+        label={isLoading ? "Working..." : "Regenerate analysis"}
         onClick={() => void runStage(stage, "regenerate")}
         disabled={isLoading}
       />
     ) : (
       <StageButton
-        label={isLoading ? "Working..." : "Generate"}
+        label={isLoading ? "Working..." : "Run analysis"}
         onClick={() => void runStage(stage, "generate")}
         disabled={isLoading}
         tone="primary"
@@ -173,6 +368,59 @@ export function AiAnalyticsTab({
   }
 
   const indicatorFooterActions = buildIndicatorFooterActions();
+  const indicatorDiagnostics = useMemo(() => {
+    const narrativeOutput = stageResults.indicator_narrative?.renderedOutput ?? "";
+    if (!narrativeOutput) {
+      return new Map<string, RegionalIndicatorRow>();
+    }
+
+    const { sections } = parseNarrativeSections(narrativeOutput);
+    const strengthening = sectionBodyForTitle(sections, /strengthening/i);
+    const weakening = sectionBodyForTitle(sections, /weakening/i);
+
+    return new Map(
+      buildRegionalIndicatorRows(ai.indicatorSeries, strengthening, weakening).map((row) => [
+        row.label,
+        row,
+      ]),
+    );
+  }, [ai.indicatorSeries, stageResults.indicator_narrative?.renderedOutput]);
+  const workflowSteps: WorkflowStep[] = [
+    {
+      number: "1",
+      title: "Score evidence",
+      detail: "Component charts and narrative",
+      state: getWorkflowState(["indicator_narrative"]),
+    },
+    {
+      number: "2",
+      title: "Plan alignment",
+      detail: "Province, national, and comparison",
+      state: getWorkflowState(planningContextStages),
+    },
+    {
+      number: "3",
+      title: "Web context",
+      detail: hasWebContext ? "Included in later stages" : "Optional enrichment",
+      state: getWorkflowState(["web_context_search"], { optional: true }),
+    },
+    {
+      number: "4",
+      title: "SWOT",
+      detail: "Evidence-backed planning read",
+      state: getWorkflowState(["swot_analysis"], {
+        blocked: !hasIndicatorNarrative || !hasAlignment,
+      }),
+    },
+    {
+      number: "5",
+      title: "Recommendations",
+      detail: "Ranked public investments",
+      state: getWorkflowState(["investment_recommendations"], {
+        blocked: !hasIndicatorNarrative || !hasAlignment || !hasSwot,
+      }),
+    },
+  ];
 
   return (
     <div className="space-y-5">
@@ -214,6 +462,8 @@ export function AiAnalyticsTab({
         </form>
       </AiStageCard>
 
+      <WorkflowProgressRail steps={workflowSteps} />
+
       <AiStageCard
         eyebrow="Step 1"
         title="Component score analysis"
@@ -221,7 +471,10 @@ export function AiAnalyticsTab({
         result={stageResults.indicator_narrative}
         resultContent={
           stageResults.indicator_narrative ? (
-            <AiIndicatorNarrativeResult result={stageResults.indicator_narrative} />
+            <AiIndicatorNarrativeResult
+              result={stageResults.indicator_narrative}
+              indicatorSeries={ai.indicatorSeries}
+            />
           ) : null
         }
         footerActions={indicatorFooterActions}
@@ -233,33 +486,53 @@ export function AiAnalyticsTab({
               series={series}
               municipalityLabel={municipality.municipality}
               provinceLabel={municipality.province}
+              diagnostic={indicatorDiagnostics.get(series.label)}
             />
           ))}
         </div>
       </AiStageCard>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <AiStageCard
-          eyebrow="Step 2"
-          title="Extract Provincial Development Plan"
-          description={`Resolve the selected municipality to ${municipality.province}, retrieve the province development plan from the Nepal workbook links, and parse it into reusable context.`}
-          actions={buildStageActions("province_plan_context", false)}
-          result={stageResults.province_plan_context}
-        />
-
-        <AiStageCard
-          eyebrow="Step 3"
-          title="Extract National Development Plan"
-          description="Retrieve the national planning documents from the Supabase source registry and normalize them into the same document-context shape used for the province plan."
-          actions={buildStageActions("national_plan_context", false)}
-          result={stageResults.national_plan_context}
-        />
-      </div>
+      <AiStageCard
+        eyebrow="Step 2"
+        title="Planning context and alignment"
+        description={`Retrieve the ${municipality.province} provincial plan context and national plan context, then compare them for the selected municipality and score theme in one run.`}
+        actions={
+          <>
+            <StageButton
+              label={isPlanningContextLoading ? "Working..." : "Run planning alignment"}
+              onClick={() => void runPlanningContext("generate")}
+              disabled={isPlanningContextLoading}
+              tone="primary"
+            />
+            <StageButton
+              label={isPlanningContextLoading ? "Working..." : "Regenerate alignment"}
+              onClick={() => void runPlanningContext("regenerate")}
+              disabled={isPlanningContextLoading || !hasAnyPlanningContextResult}
+            />
+          </>
+        }
+      >
+        <div className="grid gap-4 xl:grid-cols-2">
+          <PlanningEvidencePanel
+            title="Provincial plan context"
+            result={stageResults.province_plan_context}
+          />
+          <PlanningEvidencePanel
+            title="National plan context"
+            result={stageResults.national_plan_context}
+          />
+        </div>
+        {stageResults.plan_alignment ? (
+          <div className="mt-4">
+            <AiAlignmentResult result={stageResults.plan_alignment} />
+          </div>
+        ) : null}
+      </AiStageCard>
 
       <AiStageCard
-        eyebrow="Step 4"
-        title="Search web context"
-        description="Optionally search the web for additional public context relevant to the selected municipality, province, and score. This can enrich later alignment, SWOT, and recommendation stages without replacing the planning documents."
+        eyebrow="Step 3"
+        title="Add current web context"
+        description="Optionally search the web for additional public context relevant to the selected municipality, province, and score. This can enrich later SWOT and recommendation stages without replacing the planning documents."
         actions={buildStageActions("web_context_search", false)}
         result={stageResults.web_context_search}
         resultContent={
@@ -270,23 +543,10 @@ export function AiAnalyticsTab({
       />
 
       <AiStageCard
-        eyebrow="Step 5"
-        title="Provincial vs national alignment"
-        description="Check whether the province plan is aligned with the national plan for the selected municipality and score context."
-        actions={buildStageActions("plan_alignment", !hasProvinceContext || !hasNationalContext)}
-        result={stageResults.plan_alignment}
-        resultContent={
-          stageResults.plan_alignment ? (
-            <AiAlignmentResult result={stageResults.plan_alignment} />
-          ) : null
-        }
-      />
-
-      <AiStageCard
-        eyebrow="Step 6"
+        eyebrow="Step 4"
         title="SWOT analysis"
-        description="Generate a municipality SWOT grounded in the chosen score, the indicator narrative, and both planning-document contexts."
-        actions={buildStageActions("swot_analysis", !hasIndicatorNarrative || !hasProvinceContext || !hasNationalContext)}
+        description="Generate a municipality SWOT grounded in the chosen score, the indicator narrative, the planning alignment, and any optional web context already added."
+        actions={buildStageActions("swot_analysis", !hasIndicatorNarrative || !hasAlignment)}
         result={stageResults.swot_analysis}
         resultContent={
           stageResults.swot_analysis ? (
@@ -296,9 +556,9 @@ export function AiAnalyticsTab({
       />
 
       <AiStageCard
-        eyebrow="Step 7"
+        eyebrow="Step 5"
         title="Public investment recommendations"
-        description="Generate Zambia-style public project investment recommendations grounded in the accumulated evidence rather than in a separate concept-note stage."
+        description="Generate public project investment recommendations grounded in the accumulated evidence rather than in a separate concept-note stage."
         actions={buildStageActions("investment_recommendations", !hasIndicatorNarrative || !hasAlignment || !hasSwot)}
         result={stageResults.investment_recommendations}
         resultContent={

@@ -33,7 +33,7 @@ const releases = [
     version: "Release v1.0",
     date: "May 18, 2026",
     notes: [
-      "Reference-style route structure restored with Home, Launch App, Methodology, Resources, Release Notes, and About pages.",
+      "Reference-style route structure restored with Home, Launch App, Methodology, Release Notes, and About pages.",
       "Interactive Plotly 2D and 3D scatterplots added with hover, zoom, click selection, and axis labels.",
       "MapLibre choropleth shipped as the default municipality map view.",
       "Supabase-backed score, component, municipality context, and analytics query layers completed for the public app.",

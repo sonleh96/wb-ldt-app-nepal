@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 function parseLine(line) {
   const trimmed = line.trim();

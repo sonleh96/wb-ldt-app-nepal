@@ -12,7 +12,6 @@ const navItems = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/methodology", label: "Methodology" },
-  { href: "/resources", label: "Resources" },
   { href: "/release-notes", label: "Release Notes" },
 ];
 

@@ -1,0 +1,460 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { PlotlyChart } from "@/components/analytics/plotly-chart";
+import { useTheme } from "@/components/theme/theme-provider";
+
+export type SngDisplayRow = {
+  municipality: string;
+  province: string;
+  population: number | null;
+  totalLandAreaKm2: number | null;
+  infrastructureScore: number | null;
+  livabilityScore: number | null;
+  prosperityScore: number | null;
+  pilAggregate: number | null;
+  hasDevelopmentStrategy: boolean;
+  strategyLevel: string | null;
+  link: string | null;
+};
+
+type SortKey = keyof SngDisplayRow;
+
+type SortState = {
+  key: SortKey;
+  direction: "asc" | "desc";
+};
+
+type TableColumn = {
+  key: SortKey;
+  label: string;
+  align?: "left" | "right" | "center";
+  render: (row: SngDisplayRow) => string | number | null;
+};
+
+type ExportColumn = {
+  label: string;
+  render: (row: SngDisplayRow) => string | number | boolean | null;
+};
+
+const tableColumns: TableColumn[] = [
+  { key: "municipality", label: "Municipality", render: (row) => row.municipality },
+  { key: "province", label: "Province", render: (row) => row.province },
+  { key: "population", label: "Population", align: "right", render: (row) => row.population },
+  {
+    key: "totalLandAreaKm2",
+    label: "Area (km2)",
+    align: "right",
+    render: (row) => row.totalLandAreaKm2,
+  },
+  {
+    key: "infrastructureScore",
+    label: "Infrastructure",
+    align: "right",
+    render: (row) => row.infrastructureScore,
+  },
+  {
+    key: "livabilityScore",
+    label: "Livability",
+    align: "right",
+    render: (row) => row.livabilityScore,
+  },
+  {
+    key: "prosperityScore",
+    label: "Prosperity",
+    align: "right",
+    render: (row) => row.prosperityScore,
+  },
+  {
+    key: "pilAggregate",
+    label: "PIL aggregate",
+    align: "right",
+    render: (row) => row.pilAggregate,
+  },
+  {
+    key: "hasDevelopmentStrategy",
+    label: "Strategy",
+    align: "center",
+    render: (row) => (row.hasDevelopmentStrategy ? "Yes" : "No"),
+  },
+  {
+    key: "strategyLevel",
+    label: "Strategy level",
+    render: (row) => row.strategyLevel,
+  },
+];
+
+const exportColumns: ExportColumn[] = [
+  { label: "Municipality", render: (row) => row.municipality },
+  { label: "Province", render: (row) => row.province },
+  { label: "Population", render: (row) => row.population },
+  { label: "Area (km2)", render: (row) => row.totalLandAreaKm2 },
+  { label: "Infrastructure Score", render: (row) => row.infrastructureScore },
+  { label: "Livability Score", render: (row) => row.livabilityScore },
+  { label: "Prosperity Score", render: (row) => row.prosperityScore },
+  { label: "PIL Aggregate", render: (row) => row.pilAggregate },
+  { label: "Has Development Strategy", render: (row) => row.hasDevelopmentStrategy ? "Yes" : "No" },
+  { label: "Strategy Level", render: (row) => row.strategyLevel },
+  { label: "Link", render: (row) => row.link },
+];
+
+const numberFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
+
+const decimalFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+});
+
+function formatCellValue(value: string | number | null) {
+  if (value === null || value === "") {
+    return "n/a";
+  }
+
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? numberFormatter.format(value) : decimalFormatter.format(value);
+  }
+
+  return value;
+}
+
+function escapeCsvValue(value: string | number | boolean | null) {
+  if (value === null) {
+    return "";
+  }
+
+  const text = String(value);
+
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+
+  return text;
+}
+
+function buildCsv(rows: SngDisplayRow[]) {
+  const header = exportColumns.map((column) => escapeCsvValue(column.label)).join(",");
+  const body = rows.map((row) =>
+    exportColumns.map((column) => escapeCsvValue(column.render(row))).join(","),
+  );
+
+  return [header, ...body].join("\r\n");
+}
+
+function compareValues(left: SngDisplayRow, right: SngDisplayRow, sort: SortState) {
+  const leftValue = left[sort.key];
+  const rightValue = right[sort.key];
+  const directionMultiplier = sort.direction === "asc" ? 1 : -1;
+
+  if (leftValue === null && rightValue === null) return 0;
+  if (leftValue === null) return 1;
+  if (rightValue === null) return -1;
+
+  if (typeof leftValue === "number" && typeof rightValue === "number") {
+    return (leftValue - rightValue) * directionMultiplier;
+  }
+
+  if (typeof leftValue === "boolean" && typeof rightValue === "boolean") {
+    return (Number(leftValue) - Number(rightValue)) * directionMultiplier;
+  }
+
+  return String(leftValue).localeCompare(String(rightValue)) * directionMultiplier;
+}
+
+function buildCurveRows(rows: SngDisplayRow[]) {
+  const sortedRows = rows
+    .filter((row) => typeof row.population === "number" && row.population >= 0)
+    .sort((left, right) => (left.population ?? 0) - (right.population ?? 0));
+  const totalPopulation = sortedRows.reduce((sum, row) => sum + (row.population ?? 0), 0);
+  let cumulativePopulation = 0;
+
+  return sortedRows.map((row, index) => {
+    cumulativePopulation += row.population ?? 0;
+
+    return {
+      ...row,
+      rank: index + 1,
+      cumulativeShare: totalPopulation > 0 ? cumulativePopulation / totalPopulation : 0,
+    };
+  });
+}
+
+function tertileMaxLabel(rows: ReturnType<typeof buildCurveRows>, index: number) {
+  const row = rows[index - 1];
+  return row?.population === null || row?.population === undefined
+    ? "n/a"
+    : numberFormatter.format(row.population);
+}
+
+export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
+  const { isDark } = useTheme();
+  const [sort, setSort] = useState<SortState>({
+    key: "population",
+    direction: "asc",
+  });
+  const textColor = isDark ? "#edf4f6" : "#18252c";
+  const gridColor = isDark ? "rgba(205,225,233,0.1)" : "rgba(24,37,44,0.08)";
+  const chartSurface = isDark ? "rgba(22,32,38,0.96)" : "#ffffff";
+
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((left, right) => compareValues(left, right, sort));
+  }, [rows, sort]);
+
+  const curveRows = useMemo(() => buildCurveRows(rows), [rows]);
+  const totalRows = curveRows.length;
+  const firstTertile = Math.floor(totalRows / 3);
+  const secondTertile = Math.floor((2 * totalRows) / 3);
+
+  function updateSort(key: SortKey) {
+    setSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }));
+  }
+
+  function downloadTable() {
+    const csv = buildCsv(rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "nepal-sng-municipality-metrics.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <section className="mt-8 space-y-6">
+      <div className="rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h3 className="text-xl font-semibold text-[var(--foreground)]">
+              Municipality population distribution
+            </h3>
+          </div>
+          <p className="max-w-3xl text-sm leading-7 text-[var(--muted-foreground)]">
+            The curve ranks municipalities by population from smallest to largest, then plots
+            cumulative population share. Tertile guides separate small, medium, and large
+            municipalities by rank.
+          </p>
+        </div>
+
+        <div className="mt-5 overflow-hidden rounded-[1.25rem] border border-[var(--border-soft)]">
+          <PlotlyChart
+            data={[
+              {
+                type: "scatter",
+                mode: "lines+markers",
+                name: "Municipalities",
+                x: curveRows.map((row) => row.rank),
+                y: curveRows.map((row) => row.cumulativeShare),
+                text: curveRows.map((row) => row.municipality),
+                customdata: curveRows.map((row) => [
+                  row.province,
+                  row.population,
+                  row.cumulativeShare,
+                ]),
+                marker: { color: "#6375ff", size: 6 },
+                line: { color: "#6375ff", width: 3 },
+                hovertemplate:
+                  "Municipality: %{text}<br>Province: %{customdata[0]}<br>Rank: %{x}<br>Population: %{customdata[1]:,}<br>Cumulative share: %{customdata[2]:.2f}<extra></extra>",
+              },
+            ]}
+            layout={{
+              autosize: true,
+              height: 460,
+              margin: { l: 64, r: 24, t: 42, b: 64 },
+              paper_bgcolor: "rgba(0,0,0,0)",
+              plot_bgcolor: chartSurface,
+              hovermode: "closest",
+              showlegend: false,
+              shapes: [
+                {
+                  type: "line",
+                  x0: firstTertile,
+                  x1: firstTertile,
+                  y0: 0,
+                  y1: 1,
+                  xref: "x",
+                  yref: "y",
+                  line: { color: textColor, width: 2 },
+                },
+                {
+                  type: "line",
+                  x0: secondTertile,
+                  x1: secondTertile,
+                  y0: 0,
+                  y1: 1,
+                  xref: "x",
+                  yref: "y",
+                  line: { color: textColor, width: 2 },
+                },
+              ],
+              annotations: [
+                {
+                  x: firstTertile / 2,
+                  y: 0.54,
+                  text: "Small",
+                  showarrow: false,
+                  font: { size: 24, color: "#e45756" },
+                },
+                {
+                  x: firstTertile / 2,
+                  y: 0.43,
+                  text: tertileMaxLabel(curveRows, firstTertile),
+                  showarrow: false,
+                  font: { size: 13, color: textColor },
+                },
+                {
+                  x: (firstTertile + secondTertile) / 2,
+                  y: 0.54,
+                  text: "Medium",
+                  showarrow: false,
+                  font: { size: 24, color: "#d9a500" },
+                },
+                {
+                  x: (firstTertile + secondTertile) / 2,
+                  y: 0.43,
+                  text: tertileMaxLabel(curveRows, secondTertile),
+                  showarrow: false,
+                  font: { size: 13, color: textColor },
+                },
+                {
+                  x: (secondTertile + totalRows) / 2,
+                  y: 0.54,
+                  text: "Large",
+                  showarrow: false,
+                  font: { size: 24, color: "#2b8a3e" },
+                },
+                {
+                  x: (secondTertile + totalRows) / 2,
+                  y: 0.43,
+                  text: tertileMaxLabel(curveRows, totalRows),
+                  showarrow: false,
+                  font: { size: 13, color: textColor },
+                },
+              ],
+              xaxis: {
+                title: { text: "Population rank (smallest to largest)", font: { color: textColor } },
+                showgrid: true,
+                gridcolor: gridColor,
+                tickfont: { color: textColor },
+                range: [1, Math.max(totalRows, 1)],
+              },
+              yaxis: {
+                title: { text: "Cumulative share", font: { color: textColor } },
+                showgrid: true,
+                gridcolor: gridColor,
+                tickfont: { color: textColor },
+                range: [0, 1],
+                tickformat: ".0%",
+              },
+            }}
+            config={{ responsive: true, displaylogo: false }}
+            style={{ width: "100%", height: "100%" }}
+            useResizeHandler
+          />
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface)]">
+        <div className="flex flex-col gap-3 border-b border-[var(--border-soft)] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-xl font-semibold text-[var(--foreground)]">
+              Municipality metrics
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={downloadTable}
+            className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border-soft)] bg-white px-4 text-sm font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            Download CSV
+          </button>
+        </div>
+
+        <div className="max-h-[560px] overflow-auto">
+          <table className="w-full min-w-[1180px] table-fixed border-collapse">
+            <colgroup>
+              <col className="w-[210px]" />
+              <col className="w-[150px]" />
+              <col className="w-[130px]" />
+              <col className="w-[130px]" />
+              <col className="w-[130px]" />
+              <col className="w-[120px]" />
+              <col className="w-[120px]" />
+              <col className="w-[120px]" />
+              <col className="w-[110px]" />
+              <col className="w-[130px]" />
+              <col className="w-[130px]" />
+            </colgroup>
+            <thead className="sticky top-0 z-10 bg-[var(--surface)] shadow-[0_1px_0_var(--border-soft)]">
+              <tr className="border-b border-[var(--border-soft)]">
+                {tableColumns.map((column) => (
+                  <th key={column.key} className="px-4 py-4 text-left align-bottom">
+                    <button
+                      type="button"
+                      onClick={() => updateSort(column.key)}
+                      className={`inline-flex min-h-8 w-full items-center gap-2 whitespace-normal text-[11px] font-semibold uppercase leading-4 tracking-[0.13em] text-[var(--muted-foreground)] ${
+                        column.align === "right"
+                          ? "justify-end text-right"
+                          : column.align === "center"
+                            ? "justify-center text-center"
+                            : "justify-start text-left"
+                      }`}
+                    >
+                      <span>{column.label}</span>
+                      <span aria-hidden="true">
+                        {sort.key === column.key ? (sort.direction === "asc" ? "↑" : "↓") : "↕"}
+                      </span>
+                    </button>
+                  </th>
+                ))}
+                <th className="px-4 py-4 text-left align-bottom text-[11px] font-semibold uppercase leading-4 tracking-[0.13em] text-[var(--muted-foreground)]">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border-soft)]">
+              {sortedRows.map((row) => (
+                <tr key={`${row.province}-${row.municipality}`} className="align-top">
+                  {tableColumns.map((column) => (
+                    <td
+                      key={`${row.province}-${row.municipality}-${column.key}`}
+                      className={`px-4 py-3 text-sm text-[var(--foreground)] ${
+                        column.align === "right"
+                          ? "text-right"
+                          : column.align === "center"
+                            ? "text-center"
+                            : "text-left"
+                      }`}
+                    >
+                      {formatCellValue(column.render(row))}
+                    </td>
+                  ))}
+                  <td className="px-4 py-3">
+                    {row.link ? (
+                      <a
+                        href={row.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                      >
+                        Open Strategy
+                      </a>
+                    ) : (
+                      <span className="text-sm text-[var(--muted-foreground)]">n/a</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}

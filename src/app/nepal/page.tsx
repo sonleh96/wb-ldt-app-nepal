@@ -3,6 +3,10 @@ import path from "node:path";
 
 import Link from "next/link";
 
+import {
+  SngDisplaySection,
+  type SngDisplayRow,
+} from "@/components/nepal/sng-display-section";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { AnalyticsDataset } from "@/types/analytics";
 
@@ -24,9 +28,12 @@ type ProvinceMunicipalityGroup = {
 type NepalHomeData = {
   metrics: HomeMetrics;
   provinceGroups: ProvinceMunicipalityGroup[];
+  sngRows: SngDisplayRow[];
 };
 
 const PREVIEW_MUNICIPALITY_COUNT = 6;
+
+export const dynamic = "force-dynamic";
 
 function normalizeProvinceName(value: string) {
   const normalized = value.toLowerCase().replace(/[^a-z]/g, "");
@@ -120,6 +127,38 @@ async function getNepalHomeData(): Promise<NepalHomeData> {
     }))
     .sort((left, right) => left.province.localeCompare(right.province));
 
+  let sngRows: SngDisplayRow[] = [];
+
+  try {
+    const supabase = getSupabaseServerClient().schema("analytics");
+    const { data, error } = await supabase
+      .from("sng_display_table")
+      .select(
+        "municipality, province, population, total_land_area_km2, infrastructure_score, livability_score, prosperity_score, pil_aggregate, has_development_strategy, strategy_level, link",
+      )
+      .order("population", { ascending: true, nullsFirst: false });
+
+    if (!error) {
+      sngRows = (data ?? []).map((row) => ({
+        municipality: String(row.municipality ?? ""),
+        province: String(row.province ?? ""),
+        population: row.population === null ? null : Number(row.population),
+        totalLandAreaKm2:
+          row.total_land_area_km2 === null ? null : Number(row.total_land_area_km2),
+        infrastructureScore:
+          row.infrastructure_score === null ? null : Number(row.infrastructure_score),
+        livabilityScore: row.livability_score === null ? null : Number(row.livability_score),
+        prosperityScore: row.prosperity_score === null ? null : Number(row.prosperity_score),
+        pilAggregate: row.pil_aggregate === null ? null : Number(row.pil_aggregate),
+        hasDevelopmentStrategy: Boolean(row.has_development_strategy),
+        strategyLevel: row.strategy_level,
+        link: row.link,
+      }));
+    }
+  } catch {
+    sngRows = [];
+  }
+
   return {
     metrics: {
       municipalityCount,
@@ -130,11 +169,12 @@ async function getNepalHomeData(): Promise<NepalHomeData> {
       totalAreaKm2,
     },
     provinceGroups,
+    sngRows,
   };
 }
 
 export default async function NepalHome() {
-  const { metrics, provinceGroups } = await getNepalHomeData();
+  const { metrics, provinceGroups, sngRows } = await getNepalHomeData();
   const populationLabel = new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
   }).format(metrics.totalPopulation);
@@ -223,6 +263,26 @@ export default async function NepalHome() {
             levels of government: Federal, Provincial, and Local. The LDT focuses on the
             latter two levels. <strong>There are, currently, 7 provinces and 753 municipalities.</strong>
           </p>
+          {sngRows.length > 0 ? (
+            <SngDisplaySection rows={sngRows} />
+          ) : (
+            <div className="mt-8 rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
+                Alternative SNG view
+              </p>
+              <p className="mt-2 text-sm leading-7 text-[var(--muted-foreground)]">
+                The SNG display table is not loaded yet. Apply migration 0009 and run
+                npm run ingest:sng-display to populate this section.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+              Subnational Development Plan Availability
+            </h3>
+          </div>
+
           <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
             <div className="flex items-center gap-3 text-[var(--foreground)]">
               <StatusBadge
