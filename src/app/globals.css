@@ -1,15 +1,47 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #f5f1e8;
+  --background: #f7f3eb;
   --foreground: #18252c;
-  --muted-foreground: #586a73;
+  --card: #ffffff;
+  --card-foreground: #18252c;
+  --popover: #ffffff;
+  --popover-foreground: #18252c;
+  --primary: #0f6f91;
+  --primary-foreground: #ffffff;
+  --secondary: #edf2ee;
+  --secondary-foreground: #1d2f36;
+  --muted: #edf2ee;
+  --muted-foreground: #5b6b74;
+  --accent: #118ab2;
+  --accent-foreground: #ffffff;
+  --destructive: #b42318;
+  --border: rgba(24, 37, 44, 0.12);
+  --input: rgba(24, 37, 44, 0.18);
+  --ring: #118ab2;
+  --chart-1: #118ab2;
+  --chart-2: #e07a5f;
+  --chart-3: #2f8f6f;
+  --chart-4: #7d88a2;
+  --chart-5: #c7923e;
+  --radius: 0.875rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #18252c;
+  --sidebar-primary: #0f6f91;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #edf2ee;
+  --sidebar-accent-foreground: #18252c;
+  --sidebar-border: rgba(24, 37, 44, 0.12);
+  --sidebar-ring: #118ab2;
   --border-soft: rgba(24, 37, 44, 0.08);
   --border-strong: rgba(24, 37, 44, 0.16);
   --surface: rgba(255, 255, 255, 0.82);
   --surface-strong: rgba(255, 255, 255, 0.94);
   --surface-muted: rgba(247, 243, 235, 0.9);
-  --accent: #118ab2;
   --accent-strong: #e07a5f;
   --accent-soft: #d9efe6;
   --header-bg: rgba(247, 243, 235, 0.82);
@@ -35,8 +67,45 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-sans: var(--font-sans);
   --font-mono: "SF Mono", "IBM Plex Mono", "Menlo", monospace;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 html {
@@ -96,7 +165,6 @@ body {
     radial-gradient(circle at top left, var(--page-glow-primary), transparent 28%),
     radial-gradient(circle at top right, var(--page-glow-secondary), transparent 24%),
     linear-gradient(180deg, var(--page-bg-start) 0%, var(--page-bg-end) 100%);
-  color: var(--foreground);
   font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
   transition:
     background-color 180ms ease,
@@ -201,4 +269,50 @@ body.dark option,
 body[data-theme="dark"] option {
   background-color: #152028;
   color: var(--foreground);
+}
+
+.dark {
+  --background: #0f171c;
+  --foreground: #edf4f6;
+  --card: #162026;
+  --card-foreground: #edf4f6;
+  --popover: #162026;
+  --popover-foreground: #edf4f6;
+  --primary: #45add0;
+  --primary-foreground: #071116;
+  --secondary: #1b2a31;
+  --secondary-foreground: #edf4f6;
+  --muted: #1b2a31;
+  --muted-foreground: #96abb2;
+  --accent: #45add0;
+  --accent-foreground: #071116;
+  --destructive: #ff7b72;
+  --border: rgba(205, 225, 233, 0.14);
+  --input: rgba(205, 225, 233, 0.18);
+  --ring: #45add0;
+  --chart-1: #45add0;
+  --chart-2: #f49b78;
+  --chart-3: #62c39a;
+  --chart-4: #a8b2d1;
+  --chart-5: #d6a84f;
+  --sidebar: #162026;
+  --sidebar-foreground: #edf4f6;
+  --sidebar-primary: #45add0;
+  --sidebar-primary-foreground: #071116;
+  --sidebar-accent: #1b2a31;
+  --sidebar-accent-foreground: #edf4f6;
+  --sidebar-border: rgba(205, 225, 233, 0.14);
+  --sidebar-ring: #45add0;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

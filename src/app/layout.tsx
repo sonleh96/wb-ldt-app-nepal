@@ -4,6 +4,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { AppHeader } from "@/components/layout/app-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Local Development Tracker",
@@ -33,15 +38,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body className="min-h-screen">
         <script dangerouslySetInnerHTML={{ __html: themeInitializer }} />
         <ThemeProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <AppHeader />
-            {children}
-            <SiteFooter />
-          </div>
+          <TooltipProvider delay={250}>
+            <div className="relative flex min-h-screen flex-col">
+              <AppHeader />
+              {children}
+              <SiteFooter />
+            </div>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

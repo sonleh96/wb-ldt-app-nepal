@@ -5,23 +5,39 @@ import euLogo from "../../images/eu_logo.webp";
 import swissLogo from "../../images/swiss_logo.webp";
 import wbLogo from "../../images/wb_logo.webp";
 import { CountrySelector } from "@/components/home/country-selector";
+import analyticsData from "@/generated/analytics-data.json";
 
 const capabilityCards = [
   {
-    title: "Multi-score analysis",
-    body: "Compare municipalities in 2D and 3D score space, inspect peer positions, and isolate the selected municipality against provincial and national baselines.",
+    title: "Compare places",
+    body: "Inspect municipalities across composite score space, peer positions, and provincial or national baselines.",
   },
   {
-    title: "Single-score analysis",
-    body: "Switch the map between pillar scores and indicators, then inspect choropleth coverage, score drivers, and municipality-level context in one workflow.",
+    title: "Read the map",
+    body: "Move from pillar and indicator choropleths into municipality context, coverage, and score drivers.",
   },
   {
-    title: "AI planning workflow",
-    body: "Generate staged component-score narratives, provincial versus national alignment, SWOT analysis, and public investment recommendations for a selected municipality.",
+    title: "Trace evidence",
+    body: "Keep methodology, plan sources, release notes, and data limitations close to each analytical result.",
   },
   {
-    title: "Planning evidence and transparency",
-    body: "Combine provincial plan sources, a national plan, external web context, methodology references, and release tracking so every result stays inspectable.",
+    title: "Synthesize plans",
+    body: "Use AI-assisted narratives, SWOT framing, and investment recommendations as inspectable planning outputs.",
+  },
+] as const;
+
+const homeStats = [
+  {
+    value: "3",
+    label: "Number of countries available",
+  },
+  {
+    value: analyticsData.coverage.analyticsMunicipalityCount.toLocaleString("en-US"),
+    label: "Total number of Local Self Governments (LSGs)",
+  },
+  {
+    value: String(analyticsData.release.year),
+    label: "Release",
   },
 ] as const;
 
@@ -29,37 +45,38 @@ export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
       <section className="border-b border-[var(--border-soft)] bg-[radial-gradient(circle_at_top,var(--hero-glow),transparent_38%),linear-gradient(180deg,var(--hero-wash-start),var(--hero-wash-end))]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col px-6 py-14 sm:px-8 lg:px-12 lg:py-20">
-          <h1 className="mt-8 max-w-6xl text-4xl font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
-            Harness Big Data and AI
-            <br />
-            to empower Local PIM Decisions
-          </h1>
-          <div className="mt-6 max-w-5xl space-y-4 text-base leading-8 text-[var(--muted-foreground)] sm:text-lg">
-            <p>
-              The GPB LDT is designed to help decision-makers at national and sub-national levels
-              prioritize measures, including public investment and asset management, to strengthen
-              local economic development (LED). The LDT allows for a focus on up to two levels of
-              sub-national governments, for example provinces and districts.
+        <div className="mx-auto w-full max-w-7xl px-6 py-12 sm:px-8 lg:px-12 lg:py-16">
+          <div className="max-w-4xl">
+            <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
+              Local Development Tracker for public investment decisions.
+            </h1>
+            <p className="mt-6 max-w-3xl text-base leading-8 text-[var(--muted-foreground)] sm:text-lg">
+              A country workspace for comparing local development conditions, reading
+              municipality-level score drivers, and linking planning evidence to public investment
+              choices.
             </p>
-            <p>
-              The GPB LDT enables rapid analysis of key sub-national development indicators across
-              the dimensions of Prosperity, Livability, and Infrastructure. The composite measures
-              are proxied by the best available big data, ranging from satellite nightlights to
-              climate change risk modeling layers.
-            </p>
-            <p>
-              The GPB LDT provides a Generative AI complication and analysis of all available local
-              development strategies, and how these benchmark against existing Prosperity,
-              Livability, and Infrastructure measures.
-            </p>
+            <div className="mt-8 grid max-w-[48rem] gap-3 sm:grid-cols-3">
+              {homeStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex min-h-28 flex-col justify-between rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-5 shadow-[0_14px_34px_rgba(39,62,71,0.07)]"
+                >
+                  <p className="font-mono text-2xl font-semibold text-[var(--foreground)]">
+                    {stat.value}
+                  </p>
+                  <p className="mt-3 text-[11px] font-medium uppercase leading-5 tracking-[0.14em] text-[var(--muted-foreground)]">
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <CountrySelector />
           </div>
-          <CountrySelector />
         </div>
       </section>
 
-      <section className="mx-auto mb-16 w-full max-w-7xl px-6 sm:px-8 lg:px-12">
-        <article className="rounded-[1.9rem] border border-[var(--border-soft)] bg-[linear-gradient(180deg,var(--panel-gradient-start),var(--panel-gradient-end))] p-7 shadow-[0_18px_45px_var(--surface-shadow)]">
+      <section className="mx-auto my-12 w-full max-w-7xl px-6 sm:px-8 lg:px-12">
+        <article className="rounded-[1.7rem] border border-[var(--border-soft)] bg-[linear-gradient(180deg,var(--panel-gradient-start),var(--panel-gradient-end))] p-6 shadow-[0_18px_45px_var(--surface-shadow)] sm:p-7">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
             What the LDT provides
           </p>
@@ -67,12 +84,12 @@ export default function Home() {
             {capabilityCards.map((capability) => (
               <div
                 key={capability.title}
-                className="rounded-[1.35rem] border border-[var(--border-soft)] bg-white/75 p-5"
+                className="rounded-[1.2rem] border border-[var(--border-soft)] bg-white/75 p-5"
               >
-                <h2 className="text-xl font-semibold text-[var(--foreground)]">
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">
                   {capability.title}
                 </h2>
-                <p className="mt-3 text-base leading-8 text-[var(--muted-foreground)]">
+                <p className="mt-3 text-sm leading-7 text-[var(--muted-foreground)]">
                   {capability.body}
                 </p>
               </div>

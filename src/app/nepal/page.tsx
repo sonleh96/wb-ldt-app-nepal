@@ -35,6 +35,10 @@ const PREVIEW_MUNICIPALITY_COUNT = 6;
 
 export const dynamic = "force-dynamic";
 
+function municipalityListKey(province: string, municipality: string, index: number) {
+  return `${normalizeProvinceName(province)}-${municipality.toLowerCase()}-${index}`;
+}
+
 function normalizeProvinceName(value: string) {
   const normalized = value.toLowerCase().replace(/[^a-z]/g, "");
 
@@ -54,7 +58,7 @@ function StatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex h-5 w-5 items-center justify-center rounded-md border text-xs font-semibold ${
+      className={`inline-flex h-6 min-w-8 items-center justify-center rounded-md border px-1.5 text-[10px] font-semibold uppercase ${
         available
           ? "border-[#2b8a3e]/50 bg-[#2b8a3e]/15 text-[#62d77a]"
           : "border-[#d14b4b]/50 bg-[#d14b4b]/12 text-[#ff8a8a]"
@@ -62,7 +66,7 @@ function StatusBadge({
       aria-label={label}
       title={label}
     >
-      {available ? "✓" : "X"}
+      {available ? "Yes" : "No"}
     </span>
   );
 }
@@ -208,23 +212,27 @@ export default async function NepalHome() {
       <section className="border-b border-[var(--border-soft)] bg-[radial-gradient(circle_at_top,var(--hero-glow),transparent_38%),linear-gradient(180deg,var(--hero-wash-start),var(--hero-wash-end))]">
         <div className="mx-auto flex w-full max-w-7xl flex-col px-6 py-16 sm:px-8 lg:px-12 lg:py-24">
           <h1 className="mt-6 max-w-6xl text-4xl font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-[3.4rem]">
-            Explore Local Economic Development in Nepal
+            Nepal subnational analytics for local economic development
           </h1>
+          <p className="mt-6 max-w-4xl text-base leading-8 text-[var(--muted-foreground)] sm:text-lg">
+            Review province and municipality coverage, compare population and PIL
+            indicators, and trace which planning documents are available for analysis.
+          </p>
           <div className="mt-12 flex flex-col gap-4 sm:flex-row">
             <Link
-              href="/analytics"
+              href="/nepal/analytics"
               className="inline-flex min-h-[58px] items-center justify-center rounded-full bg-[var(--accent)] px-8 py-4 text-base font-medium text-white shadow-[0_12px_28px_rgba(17,138,178,0.24)] transition-transform hover:-translate-y-0.5 hover:brightness-95 sm:min-w-[12rem]"
             >
               <span className="flex flex-col items-center leading-tight">
-                <span>Local Development</span>
-                <span>Deep Dive</span>
+                <span>Analyze municipality</span>
+                <span>metrics</span>
               </span>
             </Link>
             <Link
               href="/"
               className="inline-flex min-h-[58px] items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-8 py-4 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-strong)] sm:min-w-[12rem]"
             >
-              Back to Country Portal
+              Compare countries
             </Link>
           </div>
         </div>
@@ -238,7 +246,7 @@ export default async function NepalHome() {
           <div className="mt-5 grid gap-4 xl:grid-cols-3">
             <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                Total population
+                Population covered
               </p>
               <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
                 {populationLabel}
@@ -246,10 +254,10 @@ export default async function NepalHome() {
             </div>
             <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                Total area
+                Land area covered
               </p>
               <p className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {totalAreaLabel} km2
+                {totalAreaLabel} sq km
               </p>
             </div>
             <div className="rounded-[1.4rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4">
@@ -262,7 +270,7 @@ export default async function NepalHome() {
                 rel="noreferrer"
                 className="mt-2 inline-flex text-2xl font-semibold text-[var(--foreground)] underline decoration-[var(--border-strong)] underline-offset-4 transition-colors hover:text-[var(--accent)]"
               >
-                Available | 2024-2028
+                Sixteenth Plan, 2024-2028
               </a>
             </div>
           </div>
@@ -275,14 +283,13 @@ export default async function NepalHome() {
             Administrative levels
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            Provinces and Municipalities
+            Provinces and municipalities
           </h2>
           <p className="mt-3 max-w-4xl text-sm leading-7 text-[var(--muted-foreground)]">
-            Nepal adopted a three-tiered federal system under its 2015 Constitution,
-            replacing a centralized unitary state. The system is designed to decentralize
-            power, promote inclusive representation, and distribute resources across three
-            levels of government: Federal, Provincial, and Local. The LDT focuses on the
-            latter two levels. <strong>There are, currently, 7 provinces and 753 municipalities.</strong>
+            Nepal&apos;s 2015 Constitution established a federal system with federal,
+            provincial, and local tiers of government. This country entry point focuses on
+            the subnational tiers used in the LDT: {metrics.provinceCount} provinces and{" "}
+            {metrics.municipalityCount} municipalities.
           </p>
           {sngRows.length > 0 ? (
             <SngDisplaySection rows={sngRows} />
@@ -292,15 +299,15 @@ export default async function NepalHome() {
                 Alternative SNG view
               </p>
               <p className="mt-2 text-sm leading-7 text-[var(--muted-foreground)]">
-                The SNG display table is not loaded yet. Apply migration 0009 and run
-                npm run ingest:sng-display to populate this section.
+                Municipality-level SNG metrics are not loaded yet. Apply migration 0009
+                and run npm run ingest:sng-display to populate this section.
               </p>
             </div>
           )}
 
           <div className="mt-8">
             <h3 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
-              Subnational Development Plan Availability
+              Development plan source availability
             </h3>
           </div>
 
@@ -310,14 +317,14 @@ export default async function NepalHome() {
                 available={true}
                 label="Development Plan available"
               />
-              <span>Development Plan available</span>
+              <span>Plan source available</span>
             </div>
             <div className="flex items-center gap-3 text-[var(--foreground)]">
               <StatusBadge
                 available={false}
                 label="Development Plan not available"
               />
-              <span>Development Plan not available</span>
+              <span>Plan source not available</span>
             </div>
           </div>
 
@@ -354,8 +361,11 @@ export default async function NepalHome() {
                     </div>
 
                     <div className="mt-4 grid gap-x-8 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
-                      {previewMunicipalities.map((municipality) => (
-                        <div key={`${group.province}-${municipality}`} className="flex items-start gap-3">
+                      {previewMunicipalities.map((municipality, index) => (
+                        <div
+                          key={municipalityListKey(group.province, municipality, index)}
+                          className="flex items-start gap-3"
+                        >
                           <StatusBadge
                             available={false}
                             label={`${municipality} does not have an available local development plan in the current source table`}
@@ -373,8 +383,15 @@ export default async function NepalHome() {
                           Show {remainingMunicipalities.length} more municipalities
                         </summary>
                         <div className="mt-4 grid gap-x-8 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
-                          {remainingMunicipalities.map((municipality) => (
-                            <div key={`${group.province}-${municipality}`} className="flex items-start gap-3">
+                          {remainingMunicipalities.map((municipality, index) => (
+                            <div
+                              key={municipalityListKey(
+                                group.province,
+                                municipality,
+                                index + PREVIEW_MUNICIPALITY_COUNT,
+                              )}
+                              className="flex items-start gap-3"
+                            >
                               <StatusBadge
                                 available={false}
                                 label={`${municipality} does not have an available local development plan in the current source table`}

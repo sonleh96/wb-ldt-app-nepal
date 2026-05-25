@@ -249,131 +249,133 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
         <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h3 className="text-xl font-semibold text-[var(--foreground)]">
-              Municipality population distribution
+              Population distribution by municipality
             </h3>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-[var(--muted-foreground)]">
-            The curve ranks municipalities by population from smallest to largest, then plots
-            cumulative population share. Tertile guides separate small, medium, and large
-            municipalities by rank.
+            Municipalities are ranked from smallest to largest population and plotted
+            against cumulative population share. Tertile guides separate the reference
+            groups used for small, medium, and large municipality analysis.
           </p>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-[1.25rem] border border-[var(--border-soft)]">
-          <PlotlyChart
-            data={[
-              {
-                type: "scatter",
-                mode: "lines+markers",
-                name: "Municipalities",
-                x: curveRows.map((row) => row.rank),
-                y: curveRows.map((row) => row.cumulativeShare),
-                text: curveRows.map((row) => row.municipality),
-                customdata: curveRows.map((row) => [
-                  row.province,
-                  row.population,
-                  row.cumulativeShare,
-                ]),
-                marker: { color: "#6375ff", size: 6 },
-                line: { color: "#6375ff", width: 3 },
-                hovertemplate:
-                  "Municipality: %{text}<br>Province: %{customdata[0]}<br>Rank: %{x}<br>Population: %{customdata[1]:,}<br>Cumulative share: %{customdata[2]:.2f}<extra></extra>",
-              },
-            ]}
-            layout={{
-              autosize: true,
-              height: 460,
-              margin: { l: 64, r: 24, t: 42, b: 64 },
-              paper_bgcolor: "rgba(0,0,0,0)",
-              plot_bgcolor: chartSurface,
-              hovermode: "closest",
-              showlegend: false,
-              shapes: [
+        <div className="mt-5 overflow-x-auto rounded-[1.25rem] border border-[var(--border-soft)]">
+          <div className="h-[420px] min-w-[680px] sm:h-[460px]">
+            <PlotlyChart
+              data={[
                 {
-                  type: "line",
-                  x0: firstTertile,
-                  x1: firstTertile,
-                  y0: 0,
-                  y1: 1,
-                  xref: "x",
-                  yref: "y",
-                  line: { color: textColor, width: 2 },
+                  type: "scatter",
+                  mode: "lines+markers",
+                  name: "Municipalities",
+                  x: curveRows.map((row) => row.rank),
+                  y: curveRows.map((row) => row.cumulativeShare),
+                  text: curveRows.map((row) => row.municipality),
+                  customdata: curveRows.map((row) => [
+                    row.province,
+                    row.population,
+                    row.cumulativeShare,
+                  ]),
+                  marker: { color: "#6375ff", size: 6 },
+                  line: { color: "#6375ff", width: 3 },
+                  hovertemplate:
+                    "Municipality: %{text}<br>Province: %{customdata[0]}<br>Rank: %{x}<br>Population: %{customdata[1]:,}<br>Cumulative share: %{customdata[2]:.2f}<extra></extra>",
                 },
-                {
-                  type: "line",
-                  x0: secondTertile,
-                  x1: secondTertile,
-                  y0: 0,
-                  y1: 1,
-                  xref: "x",
-                  yref: "y",
-                  line: { color: textColor, width: 2 },
+              ]}
+              layout={{
+                autosize: true,
+                height: 460,
+                margin: { l: 64, r: 24, t: 42, b: 64 },
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: chartSurface,
+                hovermode: "closest",
+                showlegend: false,
+                shapes: [
+                  {
+                    type: "line",
+                    x0: firstTertile,
+                    x1: firstTertile,
+                    y0: 0,
+                    y1: 1,
+                    xref: "x",
+                    yref: "y",
+                    line: { color: textColor, width: 2 },
+                  },
+                  {
+                    type: "line",
+                    x0: secondTertile,
+                    x1: secondTertile,
+                    y0: 0,
+                    y1: 1,
+                    xref: "x",
+                    yref: "y",
+                    line: { color: textColor, width: 2 },
+                  },
+                ],
+                annotations: [
+                  {
+                    x: firstTertile / 2,
+                    y: 0.54,
+                    text: "Small",
+                    showarrow: false,
+                    font: { size: 24, color: "#e45756" },
+                  },
+                  {
+                    x: firstTertile / 2,
+                    y: 0.43,
+                    text: tertileMaxLabel(curveRows, firstTertile),
+                    showarrow: false,
+                    font: { size: 13, color: textColor },
+                  },
+                  {
+                    x: (firstTertile + secondTertile) / 2,
+                    y: 0.54,
+                    text: "Medium",
+                    showarrow: false,
+                    font: { size: 24, color: "#d9a500" },
+                  },
+                  {
+                    x: (firstTertile + secondTertile) / 2,
+                    y: 0.43,
+                    text: tertileMaxLabel(curveRows, secondTertile),
+                    showarrow: false,
+                    font: { size: 13, color: textColor },
+                  },
+                  {
+                    x: (secondTertile + totalRows) / 2,
+                    y: 0.54,
+                    text: "Large",
+                    showarrow: false,
+                    font: { size: 24, color: "#2b8a3e" },
+                  },
+                  {
+                    x: (secondTertile + totalRows) / 2,
+                    y: 0.43,
+                    text: tertileMaxLabel(curveRows, totalRows),
+                    showarrow: false,
+                    font: { size: 13, color: textColor },
+                  },
+                ],
+                xaxis: {
+                  title: { text: "Population rank (smallest to largest)", font: { color: textColor } },
+                  showgrid: true,
+                  gridcolor: gridColor,
+                  tickfont: { color: textColor },
+                  range: [1, Math.max(totalRows, 1)],
                 },
-              ],
-              annotations: [
-                {
-                  x: firstTertile / 2,
-                  y: 0.54,
-                  text: "Small",
-                  showarrow: false,
-                  font: { size: 24, color: "#e45756" },
+                yaxis: {
+                  title: { text: "Cumulative share", font: { color: textColor } },
+                  showgrid: true,
+                  gridcolor: gridColor,
+                  tickfont: { color: textColor },
+                  range: [0, 1],
+                  tickformat: ".0%",
                 },
-                {
-                  x: firstTertile / 2,
-                  y: 0.43,
-                  text: tertileMaxLabel(curveRows, firstTertile),
-                  showarrow: false,
-                  font: { size: 13, color: textColor },
-                },
-                {
-                  x: (firstTertile + secondTertile) / 2,
-                  y: 0.54,
-                  text: "Medium",
-                  showarrow: false,
-                  font: { size: 24, color: "#d9a500" },
-                },
-                {
-                  x: (firstTertile + secondTertile) / 2,
-                  y: 0.43,
-                  text: tertileMaxLabel(curveRows, secondTertile),
-                  showarrow: false,
-                  font: { size: 13, color: textColor },
-                },
-                {
-                  x: (secondTertile + totalRows) / 2,
-                  y: 0.54,
-                  text: "Large",
-                  showarrow: false,
-                  font: { size: 24, color: "#2b8a3e" },
-                },
-                {
-                  x: (secondTertile + totalRows) / 2,
-                  y: 0.43,
-                  text: tertileMaxLabel(curveRows, totalRows),
-                  showarrow: false,
-                  font: { size: 13, color: textColor },
-                },
-              ],
-              xaxis: {
-                title: { text: "Population rank (smallest to largest)", font: { color: textColor } },
-                showgrid: true,
-                gridcolor: gridColor,
-                tickfont: { color: textColor },
-                range: [1, Math.max(totalRows, 1)],
-              },
-              yaxis: {
-                title: { text: "Cumulative share", font: { color: textColor } },
-                showgrid: true,
-                gridcolor: gridColor,
-                tickfont: { color: textColor },
-                range: [0, 1],
-                tickformat: ".0%",
-              },
-            }}
-            config={{ responsive: true, displaylogo: false }}
-            style={{ width: "100%", height: "100%" }}
-            useResizeHandler
-          />
+              }}
+              config={{ responsive: true, displaylogo: false }}
+              style={{ width: "100%", height: "100%" }}
+              useResizeHandler
+            />
+          </div>
         </div>
       </div>
 
@@ -389,7 +391,7 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search table"
+                placeholder="Filter municipalities"
                 className="h-10 w-full rounded-full border border-[var(--border-soft)] bg-white px-4 text-sm text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--accent)]"
               />
             </label>
@@ -399,7 +401,7 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
             onClick={downloadTable}
             className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border-soft)] bg-white px-4 text-sm font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
-            Download CSV
+            Export CSV
           </button>
         </div>
 
@@ -446,38 +448,42 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-soft)]">
-              {sortedRows.length > 0 ? sortedRows.map((row) => (
-                <tr key={row.rowKey} className="align-top">
-                  {tableColumns.map((column) => (
-                    <td
-                      key={`${row.rowKey}-${column.key}`}
-                      className={`px-4 py-3 text-sm text-[var(--foreground)] ${
-                        column.align === "right"
-                          ? "text-right"
-                          : column.align === "center"
-                            ? "text-center"
-                            : "text-left"
-                      }`}
-                    >
-                      {formatCellValue(column.render(row))}
-                    </td>
-                  ))}
-                  <td className="px-4 py-3">
-                    {row.link ? (
-                      <a
-                        href={row.link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              {sortedRows.length > 0 ? sortedRows.map((row, index) => {
+                const rowRenderKey = `${row.rowKey}-${index}`;
+
+                return (
+                  <tr key={rowRenderKey} className="align-top">
+                    {tableColumns.map((column) => (
+                      <td
+                        key={`${rowRenderKey}-${column.key}`}
+                        className={`px-4 py-3 text-sm text-[var(--foreground)] ${
+                          column.align === "right"
+                            ? "text-right"
+                            : column.align === "center"
+                              ? "text-center"
+                              : "text-left"
+                        }`}
                       >
-                        Open Strategy
-                      </a>
-                    ) : (
-                      <span className="text-sm text-[var(--muted-foreground)]">n/a</span>
-                    )}
-                  </td>
-                </tr>
-              )) : (
+                        {formatCellValue(column.render(row))}
+                      </td>
+                    ))}
+                    <td className="px-4 py-3">
+                      {row.link ? (
+                        <a
+                          href={row.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                        >
+                          Open source
+                        </a>
+                      ) : (
+                        <span className="text-sm text-[var(--muted-foreground)]">n/a</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              }) : (
                 <tr>
                   <td
                     colSpan={tableColumns.length + 1}
