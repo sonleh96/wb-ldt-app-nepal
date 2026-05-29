@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 
 import { AiAnalyticsTab } from "@/components/analytics/ai-analytics-tab";
@@ -18,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCountryBySlug, type Country } from "@/lib/countries";
 import { getAnalyticsPageData } from "@/lib/data/queries";
 
 function getSearchValue(value: string | string[] | undefined, fallback: string) {
@@ -29,6 +31,7 @@ function getSearchValue(value: string | string[] | undefined, fallback: string) 
 }
 
 function buildTabHref(
+  countrySlug: string,
   searchParams: Record<string, string | string[] | undefined>,
   tab: string,
 ) {
@@ -52,7 +55,7 @@ function buildTabHref(
   }
 
   params.set("tab", tab);
-  return `/nepal/analytics?${params.toString()}`;
+  return `/${countrySlug}/analytics?${params.toString()}`;
 }
 
 function SelectControl({
@@ -86,13 +89,53 @@ function SelectControl({
   );
 }
 
+function AnalyticsPendingPage({ country }: { country: Country }) {
+  return (
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-18 sm:px-8 lg:px-10">
+      <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[linear-gradient(135deg,var(--surface-strong),var(--surface-muted))] p-8 shadow-[0_18px_50px_var(--surface-shadow)] sm:p-10">
+        <span className="inline-flex rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+          {country.name} analytics
+        </span>
+        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl">
+          Analytics data under construction
+        </h1>
+        <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted-foreground)] sm:text-lg">
+          The {country.name} workspace is already routed, but its analytics dataset, generated fallback files, and map
+          assets have not been loaded yet.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Button nativeButton={false} render={<Link href={`/${country.slug}`} />}>
+            Back to {country.name}
+          </Button>
+          <Button nativeButton={false} render={<Link href="/" />} variant="outline">
+            Back to country portal
+          </Button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default async function AnalyticsPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ country: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const resolvedParams = await params;
+  const country = getCountryBySlug(resolvedParams.country);
+
+  if (!country) {
+    notFound();
+  }
+
+  if (country.analyticsStatus !== "live") {
+    return <AnalyticsPendingPage country={country} />;
+  }
+
   const resolvedSearchParams = await searchParams;
-  const data = await getAnalyticsPageData(resolvedSearchParams);
+  const data = await getAnalyticsPageData(resolvedSearchParams, country.code);
   const selectedTab = getSearchValue(resolvedSearchParams.tab, "multi");
 
   return (
@@ -112,7 +155,7 @@ export default async function AnalyticsPage({
             </p>
           </div>
           <Badge variant="outline" className="h-7 rounded-lg px-3 text-sm">
-            Latest Data Year: {data.release.year}
+            {country.name} | Latest Data Year: {data.release.year}
           </Badge>
         </div>
       </div>
@@ -126,12 +169,12 @@ export default async function AnalyticsPage({
                 <CardDescription>Select a task area. Filters stay in the URL.</CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue={selectedTab} orientation="vertical">
+                <Tabs value={selectedTab} orientation="vertical">
                   <TabsList className="grid h-auto w-full grid-cols-1 gap-2 bg-transparent p-0">
                     <TabsTrigger
                       value="multi"
                       nativeButton={false}
-                      render={<Link href={buildTabHref(resolvedSearchParams, "multi")} />}
+                      render={<Link href={buildTabHref(country.slug, resolvedSearchParams, "multi")} />}
                       className="h-auto justify-start rounded-lg border border-border bg-background px-3 py-2 text-left data-active:border-primary data-active:bg-primary data-active:text-primary-foreground"
                     >
                       Compare Scores
@@ -139,7 +182,7 @@ export default async function AnalyticsPage({
                     <TabsTrigger
                       value="single"
                       nativeButton={false}
-                      render={<Link href={buildTabHref(resolvedSearchParams, "single")} />}
+                      render={<Link href={buildTabHref(country.slug, resolvedSearchParams, "single")} />}
                       className="h-auto justify-start rounded-lg border border-border bg-background px-3 py-2 text-left data-active:border-primary data-active:bg-primary data-active:text-primary-foreground"
                     >
                       Map & Drivers
@@ -147,7 +190,7 @@ export default async function AnalyticsPage({
                     <TabsTrigger
                       value="ai"
                       nativeButton={false}
-                      render={<Link href={buildTabHref(resolvedSearchParams, "ai")} />}
+                      render={<Link href={buildTabHref(country.slug, resolvedSearchParams, "ai")} />}
                       className="h-auto justify-start rounded-lg border border-border bg-background px-3 py-2 text-left data-active:border-primary data-active:bg-primary data-active:text-primary-foreground"
                     >
                       AI Planning Brief
@@ -188,7 +231,7 @@ export default async function AnalyticsPage({
             <CardHeader>
               <CardTitle className="text-2xl">Map & Drivers</CardTitle>
               <CardDescription className="max-w-4xl leading-7">
-                Inspect one pillar score or indicator across Nepal, then use driver charts to identify what pulls the
+                Inspect one pillar score or indicator across {country.name}, then use driver charts to identify what pulls the
                 selected municipality above or below the national baseline.
               </CardDescription>
             </CardHeader>

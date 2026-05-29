@@ -27,6 +27,16 @@ function isAiGenerationAllowed(request: Request) {
 
 function serializeStageError(error: unknown) {
   if (error instanceof Error) {
+    const cause = (error as Error & { cause?: unknown }).cause;
+
+    if (cause instanceof Error && cause.message && cause.message !== error.message) {
+      return `${error.message}: ${cause.message}`;
+    }
+
+    if (typeof cause === "string" && cause && cause !== error.message) {
+      return `${error.message}: ${cause}`;
+    }
+
     return error.message;
   }
 
@@ -89,6 +99,7 @@ export async function parseAiStageRequest(request: Request) {
 
 export function toStageErrorResponse(stage: string, error: unknown) {
   const message = serializeStageError(error);
+  console.error(`AI stage ${stage} failed:`, error);
 
   return NextResponse.json(
     {

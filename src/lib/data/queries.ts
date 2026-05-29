@@ -9,6 +9,12 @@ import type {
   AiIndicatorSeries,
   AiPipelineContext,
 } from "@/lib/ai/types";
+import {
+  defaultCountry,
+  getCountryByCode,
+  type Country,
+  type CountryCode,
+} from "@/lib/countries";
 import { scoreComponentIndicatorMappings } from "@/lib/data/labels";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type {
@@ -33,6 +39,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 type ReleaseRow = {
   id: string;
+  country_code: CountryCode;
   release_key: string;
   year: number;
   label: string;
@@ -45,6 +52,7 @@ type ReleaseRow = {
 
 type MunicipalityRow = {
   id: string;
+  country_code: CountryCode;
   municipality: string;
   district: string;
   province: string;
@@ -165,19 +173,25 @@ function isMissingRelationError(error: unknown) {
   return code === "PGRST205" || code === "42P01";
 }
 
-const loadLocalAnalyticsFallback = cache(async (): Promise<AnalyticsDataset> => {
-  const filePath = path.join(process.cwd(), "src/generated/analytics-data.json");
+function resolveCountry(countryCode: CountryCode | string | undefined): Country {
+  return getCountryByCode(countryCode ?? defaultCountry.code) ?? defaultCountry;
+}
+
+const loadLocalAnalyticsFallback = cache(async (countryCode: CountryCode): Promise<AnalyticsDataset> => {
+  const country = resolveCountry(countryCode);
+  const filePath = path.join(process.cwd(), country.fallbackDataPath);
   const raw = await readFile(filePath, "utf8");
   return JSON.parse(raw) as AnalyticsDataset;
 });
 
-const loadMapFeatureCollection = cache(async (): Promise<MapFeatureCollection> => {
-  const filePath = path.join(process.cwd(), "public/data/nepal-municipalities.geojson");
+const loadMapFeatureCollection = cache(async (countryCode: CountryCode): Promise<MapFeatureCollection> => {
+  const country = resolveCountry(countryCode);
+  const filePath = path.join(process.cwd(), country.mapDataPath);
   const raw = await readFile(filePath, "utf8");
   return JSON.parse(raw) as MapFeatureCollection;
 });
 
-const loadSupabaseBaseData = cache(async () => {
+const loadSupabaseBaseData = cache(async (countryCode: CountryCode) => {
   const supabase = getSupabaseServerClient().schema("analytics");
 
   const scoreComponentResultPromise = supabase
@@ -202,15 +216,17 @@ const loadSupabaseBaseData = cache(async () => {
       supabase
         .from("dataset_releases")
         .select(
-          "id, release_key, year, label, admin_file_name, score_file_name, geojson_file_name, is_active, created_at",
+          "id, country_code, release_key, year, label, admin_file_name, score_file_name, geojson_file_name, is_active, created_at",
         )
+        .eq("country_code", countryCode)
         .order("year", { ascending: true })
         .order("created_at", { ascending: false }),
       supabase
         .from("municipalities")
         .select(
-          "id, municipality, district, province, municipality_slug, district_slug, province_slug, composite_key",
+          "id, country_code, municipality, district, province, municipality_slug, district_slug, province_slug, composite_key",
         )
+        .eq("country_code", countryCode)
         .order("province", { ascending: true })
         .order("district", { ascending: true })
         .order("municipality", { ascending: true }),
@@ -229,7 +245,8 @@ const loadSupabaseBaseData = cache(async () => {
         .order("display_order", { ascending: true }),
       supabase
         .from("municipality_boundaries")
-        .select("municipality_id", { count: "exact", head: true }),
+        .select("municipality_id, municipalities!inner(country_code)", { count: "exact", head: true })
+        .eq("municipalities.country_code", countryCode),
       scoreComponentResultPromise,
     ]);
 
@@ -631,17 +648,19 @@ function pickReleaseForYear(releases: ReleaseRow[], requestedYear: number) {
 
 export async function getAnalyticsPageData(
   rawSearchParams: Promise<SearchParams> | SearchParams,
+  countryCode: CountryCode = defaultCountry.code,
 ): Promise<AnalyticsPageData> {
+  const country = resolveCountry(countryCode);
   const searchParams = await rawSearchParams;
   const selectedTab = getSearchValue(searchParams.tab, "multi");
   const shouldBuildMapData = selectedTab === "single";
   const shouldBuildComponentData = selectedTab === "single" || selectedTab === "ai";
   const shouldBuildAiSeries = selectedTab === "ai";
   const [baseData, localFallback, featureCollection] = await Promise.all([
-    loadSupabaseBaseData(),
-    loadLocalAnalyticsFallback(),
+    loadSupabaseBaseData(country.code),
+    loadLocalAnalyticsFallback(country.code),
     shouldBuildMapData
-      ? loadMapFeatureCollection()
+      ? loadMapFeatureCollection(country.code)
       : Promise.resolve({ type: "FeatureCollection", features: [] } satisfies MapFeatureCollection),
   ]);
 
@@ -983,7 +1002,13 @@ export async function getAnalyticsPageData(
   }
 
   return {
+    country: {
+      code: country.code,
+      slug: country.slug,
+      name: country.name,
+    },
     release: {
+      countryCode: country.code,
       key: selectedRelease.release_key,
       year: selectedRelease.year,
       adminFileName: selectedRelease.admin_file_name ?? localFallback.release.adminFileName,
@@ -1082,8 +1107,8 @@ export async function getAnalyticsPageData(
 
 export async function getMethodologyData() {
   const [baseData, localFallback] = await Promise.all([
-    loadSupabaseBaseData(),
-    loadLocalAnalyticsFallback(),
+    loadSupabaseBaseData(defaultCountry.code),
+    loadLocalAnalyticsFallback(defaultCountry.code),
   ]);
   const scoreComponentRowsByParentId = new Map<string, ScoreComponentRow[]>();
   for (const row of baseData.scoreComponents) {

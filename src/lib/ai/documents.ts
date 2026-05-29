@@ -5,7 +5,11 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 
-import { loadDocumentContext, saveDocumentContext } from "@/lib/ai/cache";
+import {
+  loadDocumentContext,
+  loadLatestDocumentContextBySource,
+  saveDocumentContext,
+} from "@/lib/ai/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   AiDocumentContext,
@@ -304,6 +308,20 @@ export async function getNationalPlanContext(scoreId?: string): Promise<{
   const sources = await loadNationalPlanSources(scoreId);
   const sourceCollectionPath = buildNationalSourceCollectionPath(sources);
   const sourceFingerprint = toFingerprint(sources.map((source) => source.link).join("||"));
+  const latestCached = await loadLatestDocumentContextBySource(
+    "national_plan",
+    null,
+    sourceCollectionPath,
+    DOCUMENT_EXTRACTION_VERSION,
+  );
+
+  if (latestCached) {
+    return {
+      context: latestCached,
+      sources,
+    };
+  }
+
   const cached = await loadDocumentContext(
     "national_plan",
     null,
@@ -402,6 +420,20 @@ export async function getProvincePlanContext(province: string): Promise<{
   }
 
   const sourceUrlOrPath = chosen.link;
+  const latestCached = await loadLatestDocumentContextBySource(
+    "province_plan",
+    province,
+    sourceUrlOrPath,
+    DOCUMENT_EXTRACTION_VERSION,
+  );
+
+  if (latestCached) {
+    return {
+      context: latestCached,
+      candidates,
+    };
+  }
+
   const cached = await loadDocumentContext(
     "province_plan",
     province,

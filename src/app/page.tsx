@@ -6,6 +6,7 @@ import swissLogo from "../../images/swiss_logo.webp";
 import wbLogo from "../../images/wb_logo.webp";
 import { CountrySelector } from "@/components/home/country-selector";
 import analyticsData from "@/generated/analytics-data.json";
+import { countries } from "@/lib/countries";
 
 const capabilityCards = [
   {
@@ -28,16 +29,16 @@ const capabilityCards = [
 
 const homeStats = [
   {
-    value: "3",
-    label: "Number of countries available",
+    value: String(countries.length),
+    label: "Country workspaces",
   },
   {
     value: analyticsData.coverage.analyticsMunicipalityCount.toLocaleString("en-US"),
-    label: "Total number of Local Self Governments (LSGs)",
+    label: "Nepal LSGs currently loaded",
   },
   {
     value: String(analyticsData.release.year),
-    label: "Release",
+    label: "Nepal release",
   },
 ] as const;
 

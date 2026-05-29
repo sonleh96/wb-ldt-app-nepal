@@ -143,13 +143,16 @@ function getStringValue(value: unknown) {
 }
 
 function toFailedStagePayload(stage: AiStageName, payload: unknown): AiStageResponsePayload {
+  const errorPayload =
+    payload && typeof payload === "object"
+      ? (payload as { error?: unknown; errorMessage?: unknown })
+      : null;
   const errorMessage =
-    payload &&
-    typeof payload === "object" &&
-    "error" in payload &&
-    typeof payload.error === "string"
-      ? payload.error
-      : "The AI stage request failed.";
+    typeof errorPayload?.errorMessage === "string"
+      ? errorPayload.errorMessage
+      : typeof errorPayload?.error === "string"
+        ? errorPayload.error
+        : "The AI stage request failed.";
 
   return {
     stage,
