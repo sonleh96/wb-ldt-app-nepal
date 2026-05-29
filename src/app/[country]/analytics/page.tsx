@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 
 import { AiAnalyticsTab } from "@/components/analytics/ai-analytics-tab";
@@ -18,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCountryBySlug } from "@/lib/countries";
 import { getAnalyticsPageData } from "@/lib/data/queries";
 
 function getSearchValue(value: string | string[] | undefined, fallback: string) {
@@ -29,6 +31,7 @@ function getSearchValue(value: string | string[] | undefined, fallback: string) 
 }
 
 function buildTabHref(
+  countrySlug: string,
   searchParams: Record<string, string | string[] | undefined>,
   tab: string,
 ) {
@@ -52,7 +55,7 @@ function buildTabHref(
   }
 
   params.set("tab", tab);
-  return `/nepal/analytics?${params.toString()}`;
+  return `/${countrySlug}/analytics?${params.toString()}`;
 }
 
 function SelectControl({
@@ -87,12 +90,21 @@ function SelectControl({
 }
 
 export default async function AnalyticsPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ country: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const resolvedParams = await params;
+  const country = getCountryBySlug(resolvedParams.country);
+
+  if (!country) {
+    notFound();
+  }
+
   const resolvedSearchParams = await searchParams;
-  const data = await getAnalyticsPageData(resolvedSearchParams);
+  const data = await getAnalyticsPageData(resolvedSearchParams, country.code);
   const selectedTab = getSearchValue(resolvedSearchParams.tab, "multi");
 
   return (
@@ -112,7 +124,7 @@ export default async function AnalyticsPage({
             </p>
           </div>
           <Badge variant="outline" className="h-7 rounded-lg px-3 text-sm">
-            Latest Data Year: {data.release.year}
+            {country.name} | Latest Data Year: {data.release.year}
           </Badge>
         </div>
       </div>
@@ -131,7 +143,7 @@ export default async function AnalyticsPage({
                     <TabsTrigger
                       value="multi"
                       nativeButton={false}
-                      render={<Link href={buildTabHref(resolvedSearchParams, "multi")} />}
+                      render={<Link href={buildTabHref(country.slug, resolvedSearchParams, "multi")} />}
                       className="h-auto justify-start rounded-lg border border-border bg-background px-3 py-2 text-left data-active:border-primary data-active:bg-primary data-active:text-primary-foreground"
                     >
                       Compare Scores
@@ -139,7 +151,7 @@ export default async function AnalyticsPage({
                     <TabsTrigger
                       value="single"
                       nativeButton={false}
-                      render={<Link href={buildTabHref(resolvedSearchParams, "single")} />}
+                      render={<Link href={buildTabHref(country.slug, resolvedSearchParams, "single")} />}
                       className="h-auto justify-start rounded-lg border border-border bg-background px-3 py-2 text-left data-active:border-primary data-active:bg-primary data-active:text-primary-foreground"
                     >
                       Map & Drivers
@@ -147,7 +159,7 @@ export default async function AnalyticsPage({
                     <TabsTrigger
                       value="ai"
                       nativeButton={false}
-                      render={<Link href={buildTabHref(resolvedSearchParams, "ai")} />}
+                      render={<Link href={buildTabHref(country.slug, resolvedSearchParams, "ai")} />}
                       className="h-auto justify-start rounded-lg border border-border bg-background px-3 py-2 text-left data-active:border-primary data-active:bg-primary data-active:text-primary-foreground"
                     >
                       AI Planning Brief
@@ -188,7 +200,7 @@ export default async function AnalyticsPage({
             <CardHeader>
               <CardTitle className="text-2xl">Map & Drivers</CardTitle>
               <CardDescription className="max-w-4xl leading-7">
-                Inspect one pillar score or indicator across Nepal, then use driver charts to identify what pulls the
+                Inspect one pillar score or indicator across {country.name}, then use driver charts to identify what pulls the
                 selected municipality above or below the national baseline.
               </CardDescription>
             </CardHeader>

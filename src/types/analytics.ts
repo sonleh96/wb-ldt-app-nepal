@@ -1,4 +1,5 @@
 import type { AiTabData } from "@/lib/ai/types";
+import type { CountryCode, CountrySlug } from "@/lib/countries";
 
 export type Pillar = "infrastructure" | "livability" | "prosperity";
 
@@ -146,7 +147,14 @@ export type MapFeatureCollection = {
 };
 
 export type AnalyticsPageData = {
-  release: AnalyticsDataset["release"];
+  country: {
+    code: CountryCode;
+    slug: CountrySlug;
+    name: string;
+  };
+  release: AnalyticsDataset["release"] & {
+    countryCode: CountryCode;
+  };
   nationalAverages: AnalyticsDataset["nationalAverages"];
   filters: {
     years: number[];
