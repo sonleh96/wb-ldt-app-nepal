@@ -256,19 +256,79 @@ export async function loadDocumentContext(
       return null;
     }
 
-    return {
-      sourceType: data.source_type as AiDocumentContext["sourceType"],
-      title: data.title,
-      province: data.province,
-      sourceUrlOrPath: data.source_url_or_path,
-      contentMode: data.content_mode as AiDocumentContext["contentMode"],
-      extractedText: data.extracted_text,
-      passages: data.passages as AiDocumentContext["passages"],
-      chunks: data.chunks as AiDocumentContext["chunks"],
-      extractionMetadata: (data.extraction_metadata ?? {}) as Record<string, unknown>,
-      contentFingerprint: data.content_fingerprint,
-      extractionVersion: data.extraction_version,
-    };
+    return toDocumentContext(data);
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+type DocumentContextRow = {
+  source_type: string;
+  title: string;
+  province: string | null;
+  source_url_or_path: string;
+  content_mode: string;
+  extracted_text: string;
+  passages: unknown;
+  chunks: unknown;
+  extraction_metadata: unknown;
+  content_fingerprint: string;
+  extraction_version: string;
+};
+
+function toDocumentContext(data: DocumentContextRow): AiDocumentContext {
+  return {
+    sourceType: data.source_type as AiDocumentContext["sourceType"],
+    title: data.title,
+    province: data.province,
+    sourceUrlOrPath: data.source_url_or_path,
+    contentMode: data.content_mode as AiDocumentContext["contentMode"],
+    extractedText: data.extracted_text,
+    passages: data.passages as AiDocumentContext["passages"],
+    chunks: data.chunks as AiDocumentContext["chunks"],
+    extractionMetadata: (data.extraction_metadata ?? {}) as Record<string, unknown>,
+    contentFingerprint: data.content_fingerprint,
+    extractionVersion: data.extraction_version,
+  };
+}
+
+export async function loadLatestDocumentContextBySource(
+  sourceType: AiDocumentContext["sourceType"],
+  province: string | null,
+  sourceUrlOrPath: string,
+  extractionVersion: string,
+): Promise<AiDocumentContext | null> {
+  const supabase = getSupabaseServerClient().schema("analytics");
+
+  try {
+    const query = supabase
+      .from("ai_document_contexts")
+      .select(
+        "source_type, title, province, source_url_or_path, content_mode, extracted_text, passages, chunks, extraction_metadata, content_fingerprint, extraction_version",
+      )
+      .eq("source_type", sourceType)
+      .eq("source_url_or_path", sourceUrlOrPath)
+      .eq("extraction_version", extractionVersion)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    const { data, error } = province
+      ? await query.eq("province", province).maybeSingle()
+      : await query.is("province", null).maybeSingle();
+
+    if (error) {
+      if (isMissingRelationError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+
+    return data ? toDocumentContext(data) : null;
   } catch (error) {
     if (isMissingRelationError(error)) {
       return null;
