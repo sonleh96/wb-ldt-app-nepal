@@ -5,11 +5,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { PlotlyChart } from "@/components/analytics/plotly-chart";
 import { useTheme } from "@/components/theme/theme-provider";
+import type { AdminLabels } from "@/lib/countries";
 
 type Scatter2DCardProps = {
   xLabel: string;
   yLabel: string;
   selectedProvince: string;
+  adminLabels: AdminLabels;
   controls?: ReactNode;
   points: Array<{
     id: string;
@@ -22,10 +24,15 @@ type Scatter2DCardProps = {
   }>;
 };
 
+function lowerFirst(value: string) {
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
+
 export function Scatter2DCard({
   xLabel,
   yLabel,
   selectedProvince,
+  adminLabels,
   controls,
   points,
 }: Scatter2DCardProps) {
@@ -52,6 +59,12 @@ export function Scatter2DCard({
   const textColor = isDark ? "#edf4f6" : "#18252c";
   const chartSurface = isDark ? "rgba(22,32,38,0.96)" : "#ffffff";
   const mutedSeries = isDark ? "rgba(205,225,233,0.54)" : "rgba(24,37,44,0.62)";
+  const lowerSingular = adminLabels.lower.singular;
+  const lowerPlural = adminLabels.lower.plural;
+  const higherSingular = adminLabels.higher.singular;
+  const hoverLocationTemplate = adminLabels.middle
+    ? `${adminLabels.middle.singular}: %{customdata[2]}<br>${higherSingular}: %{customdata[3]}<br>`
+    : `${higherSingular}: %{customdata[3]}<br>`;
 
   return (
     <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-6 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
@@ -62,7 +75,7 @@ export function Scatter2DCard({
         {yLabel} vs {xLabel}
       </h2>
       <p className="mt-3 text-sm leading-7 text-[var(--muted-foreground)]">
-        Hover for score values, drag to zoom, and click a municipality to make it the active comparison target.
+        Hover for score values, drag to zoom, and click a {lowerFirst(lowerSingular)} to make it the active comparison target.
       </p>
       {controls ? <div className="mt-5">{controls}</div> : null}
       <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-[var(--border-soft)] bg-white/80">
@@ -71,7 +84,7 @@ export function Scatter2DCard({
             {
               type: "scatter",
               mode: "markers",
-              name: "Other municipalities",
+              name: `Other ${lowerFirst(lowerPlural)}`,
               x: others.map((point) => point.x),
               y: others.map((point) => point.y),
               text: others.map((point) => point.label),
@@ -81,13 +94,13 @@ export function Scatter2DCard({
                 size: 8,
               },
               hovertemplate:
-                "<b>%{text}</b><br>District: %{customdata[2]}<br>Province: %{customdata[3]}<br>" +
+                `<b>%{text}</b><br>${hoverLocationTemplate}` +
                 `${xLabel}: %{x:.2f}<br>${yLabel}: %{y:.2f}<extra></extra>`,
             },
             {
               type: "scatter",
               mode: "markers",
-              name: "Same province",
+              name: `Same ${lowerFirst(higherSingular)}`,
               x: sameProvince.map((point) => point.x),
               y: sameProvince.map((point) => point.y),
               text: sameProvince.map((point) => point.label),
@@ -98,13 +111,13 @@ export function Scatter2DCard({
                 line: { color: "#9a4d00", width: 0.6 },
               },
               hovertemplate:
-                "<b>%{text}</b><br>District: %{customdata[2]}<br>Province: %{customdata[3]}<br>" +
+                `<b>%{text}</b><br>${hoverLocationTemplate}` +
                 `${xLabel}: %{x:.2f}<br>${yLabel}: %{y:.2f}<extra></extra>`,
             },
             {
               type: "scatter",
               mode: "markers",
-              name: "Highlighted municipality",
+              name: `Highlighted ${lowerFirst(lowerSingular)}`,
               x: highlighted.map((point) => point.x),
               y: highlighted.map((point) => point.y),
               text: highlighted.map((point) => point.label),
@@ -115,7 +128,7 @@ export function Scatter2DCard({
                 line: { color: "#5f0f16", width: 1 },
               },
               hovertemplate:
-                "<b>%{text}</b><br>District: %{customdata[2]}<br>Province: %{customdata[3]}<br>" +
+                `<b>%{text}</b><br>${hoverLocationTemplate}` +
                 `${xLabel}: %{x:.2f}<br>${yLabel}: %{y:.2f}<extra></extra>`,
             },
           ]}

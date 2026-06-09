@@ -58,6 +58,10 @@ function buildTabHref(
   return `/${countrySlug}/analytics?${params.toString()}`;
 }
 
+function lowerFirst(value: string) {
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
+
 function SelectControl({
   label,
   name,
@@ -116,6 +120,35 @@ function AnalyticsPendingPage({ country }: { country: Country }) {
   );
 }
 
+function AiPlanningUnavailable({ country }: { country: Country }) {
+  return (
+    <Card className="border-[var(--border-soft)] bg-[var(--surface-strong)] shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
+      <CardHeader>
+        <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
+          AI planning brief
+        </p>
+        <CardTitle className="text-2xl">
+          Planning documents are not loaded for {country.name} yet
+        </CardTitle>
+        <CardDescription className="max-w-4xl leading-7">
+          {country.planningDocuments.message}. The score comparison, map, and driver
+          analysis views are available now; country-specific planning evidence will be
+          enabled in a later release.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          nativeButton={false}
+          render={<Link href={`/${country.slug}/analytics?tab=multi`} />}
+          variant="outline"
+        >
+          Back to Compare Scores
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default async function AnalyticsPage({
   params,
   searchParams,
@@ -135,8 +168,18 @@ export default async function AnalyticsPage({
   }
 
   const resolvedSearchParams = await searchParams;
-  const data = await getAnalyticsPageData(resolvedSearchParams, country.code);
   const selectedTab = getSearchValue(resolvedSearchParams.tab, "multi");
+  const dataSearchParams =
+    selectedTab === "ai" && !country.planningDocuments.aiEnabled
+      ? { ...resolvedSearchParams, tab: "multi" }
+      : resolvedSearchParams;
+  const data = await getAnalyticsPageData(dataSearchParams, country.code);
+  const lowerSingular = country.adminLabels.lower.singular;
+  const lowerPlural = country.adminLabels.lower.plural;
+  const higherSingular = country.adminLabels.higher.singular;
+  const lowerSingularLabel = lowerFirst(lowerSingular);
+  const lowerPluralLabel = lowerFirst(lowerPlural);
+  const higherSingularLabel = lowerFirst(higherSingular);
 
   return (
     <main className="mx-auto flex w-full max-w-[95vw] flex-1 flex-col px-6 pb-16 pt-10 sm:px-8 lg:px-10">
@@ -147,11 +190,11 @@ export default async function AnalyticsPage({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">
-              Municipality development analysis
+              {lowerSingular} development analysis
             </h1>
             <p className="mt-3 max-w-4xl text-base leading-8 text-[var(--muted-foreground)]">
               Move through comparison, geographic driver review, and AI-assisted planning outputs without losing the
-              selected year, province, municipality, or metric context.
+              selected year, {higherSingularLabel}, {lowerSingularLabel}, or metric context.
             </p>
           </div>
           <Badge variant="outline" className="h-7 rounded-lg px-3 text-sm">
@@ -206,18 +249,22 @@ export default async function AnalyticsPage({
               municipalities={data.filters.municipalities}
               selected={data.selected}
               selectedTab={selectedTab}
+              adminLabels={country.adminLabels}
               mode="sidebar"
             />
 
             <MunicipalitySummaryCard
               municipality={data.municipality}
               nationalScoreAverages={data.nationalAverages.scores}
+              adminLabels={country.adminLabels}
               compact
             />
           </div>
         </aside>
 
-        {selectedTab === "ai" ? (
+        {selectedTab === "ai" && !country.planningDocuments.aiEnabled ? (
+          <AiPlanningUnavailable country={country} />
+        ) : selectedTab === "ai" ? (
           <AiAnalyticsTab
             key={`${data.release.key}:${data.municipality.id}:${data.ai.selectedScoreId}`}
             release={data.release}
@@ -232,7 +279,7 @@ export default async function AnalyticsPage({
               <CardTitle className="text-2xl">Map & Drivers</CardTitle>
               <CardDescription className="max-w-4xl leading-7">
                 Inspect one pillar score or indicator across {country.name}, then use driver charts to identify what pulls the
-                selected municipality above or below the national baseline.
+                selected {lowerSingularLabel} above or below the national baseline.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -273,15 +320,17 @@ export default async function AnalyticsPage({
                 features={data.map.features}
                 metric={data.map.metric}
                 selectedCompositeKey={data.municipality.compositeKey}
-                coverageLabel={data.map.coverageLabel}
+                coverageLabel={`${data.coverage.mapMunicipalityCount} mapped of ${data.coverage.analyticsMunicipalityCount} analytics ${lowerPluralLabel}`}
                 minimum={data.map.summary.minimum}
                 maximum={data.map.summary.maximum}
+                adminLabels={country.adminLabels}
               />
             </section>
             <ScoreWaterfallSection
               groups={data.waterfalls}
               municipalityName={data.municipality.municipality}
               provinceName={data.municipality.province}
+              adminLabels={country.adminLabels}
             />
           </div>
         </div>
@@ -291,8 +340,8 @@ export default async function AnalyticsPage({
             <CardHeader>
               <CardTitle className="text-2xl">Compare Scores</CardTitle>
               <CardDescription className="max-w-4xl leading-7">
-                Compare municipalities across the core pillars in 2D and 3D. The selected municipality remains
-                highlighted against peer municipalities in the same province.
+                Compare {lowerPluralLabel} across the core pillars in 2D and 3D. The selected {lowerSingularLabel} remains
+                highlighted against peers in the same {higherSingularLabel}.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -302,6 +351,7 @@ export default async function AnalyticsPage({
               xLabel={data.scatter2d.xMetric.label}
               yLabel={data.scatter2d.yMetric.label}
               selectedProvince={data.municipality.province}
+              adminLabels={country.adminLabels}
               controls={
                 <form className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                   <input type="hidden" name="tab" value="multi" />
@@ -341,6 +391,7 @@ export default async function AnalyticsPage({
             />
             <Scatter3DLoader
               selectedProvince={data.municipality.province}
+              adminLabels={country.adminLabels}
               points={data.scatter3d.points}
             />
           </section>

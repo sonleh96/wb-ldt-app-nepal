@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import maplibregl, { type ExpressionSpecification, type GeoJSONSource, type Map } from "maplibre-gl";
 
 import { defaultMapView, mapStyle } from "@/lib/maps/map-style";
+import type { AdminLabels } from "@/lib/countries";
 import type { AnalyticsFeature, MetricDefinition } from "@/types/analytics";
 
 type ChoroplethMapCardProps = {
@@ -15,6 +16,7 @@ type ChoroplethMapCardProps = {
   coverageLabel: string;
   minimum: number | null;
   maximum: number | null;
+  adminLabels: AdminLabels;
 };
 
 type SourceProperties = AnalyticsFeature["properties"] & {
@@ -25,7 +27,11 @@ function formatMetricValue(value: number | null) {
   return value === null ? "No data" : value.toFixed(2);
 }
 
-function buildPopupContent(properties: SourceProperties, metricLabel: string) {
+function buildPopupContent(
+  properties: SourceProperties,
+  metricLabel: string,
+  adminLabels: AdminLabels,
+) {
   const container = document.createElement("div");
   container.className = "space-y-1";
 
@@ -36,7 +42,9 @@ function buildPopupContent(properties: SourceProperties, metricLabel: string) {
 
   const location = document.createElement("div");
   location.className = "text-xs text-slate-500";
-  location.textContent = `${properties.District}, ${properties.Province}`;
+  location.textContent = adminLabels.middle
+    ? `${adminLabels.middle.singular}: ${properties.District} | ${adminLabels.higher.singular}: ${properties.Province}`
+    : `${adminLabels.higher.singular}: ${properties.Province}`;
   container.appendChild(location);
 
   const value = document.createElement("div");
@@ -143,6 +151,7 @@ export function ChoroplethMapCard({
   coverageLabel,
   minimum,
   maximum,
+  adminLabels,
 }: ChoroplethMapCardProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -158,6 +167,7 @@ export function ChoroplethMapCard({
   const minimumRef = useRef(minimum);
   const maximumRef = useRef(maximum);
   const selectedCompositeKeyRef = useRef(selectedCompositeKey);
+  const adminLabelsRef = useRef(adminLabels);
 
   useEffect(() => {
     metricLabelRef.current = metric.label;
@@ -167,7 +177,8 @@ export function ChoroplethMapCard({
     minimumRef.current = minimum;
     maximumRef.current = maximum;
     selectedCompositeKeyRef.current = selectedCompositeKey;
-  }, [features, maximum, metric.label, minimum, searchParams, selectedCompositeKey, sourceData]);
+    adminLabelsRef.current = adminLabels;
+  }, [adminLabels, features, maximum, metric.label, minimum, searchParams, selectedCompositeKey, sourceData]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -249,7 +260,13 @@ export function ChoroplethMapCard({
 
         popupRef.current
           ?.setLngLat(event.lngLat)
-          .setDOMContent(buildPopupContent(properties, metricLabelRef.current))
+          .setDOMContent(
+            buildPopupContent(
+              properties,
+              metricLabelRef.current,
+              adminLabelsRef.current,
+            ),
+          )
           .addTo(map);
       });
 

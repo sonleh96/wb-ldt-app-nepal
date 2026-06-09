@@ -16,6 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { AdminLabels } from "@/lib/countries";
 
 type AnalyticsFiltersProps = {
   years: number[];
@@ -34,8 +35,13 @@ type AnalyticsFiltersProps = {
     aiScoreId: string;
   };
   selectedTab: string;
+  adminLabels: AdminLabels;
   mode?: "top" | "sidebar";
 };
+
+function lowerFirst(value: string) {
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
 
 function SelectField({
   label,
@@ -96,12 +102,16 @@ export function AnalyticsFilters({
   municipalities,
   selected,
   selectedTab,
+  adminLabels,
   mode = "top",
 }: AnalyticsFiltersProps) {
   const isSidebar = mode === "sidebar";
   const selectedMunicipalityLabel =
     municipalities.find((municipality) => municipality.id === selected.municipalityId)
       ?.label ?? selected.municipalityId;
+  const lowerSingular = adminLabels.lower.singular;
+  const higherSingular = adminLabels.higher.singular;
+  const higherPlural = adminLabels.higher.plural;
 
   return (
     <TooltipProvider>
@@ -128,7 +138,7 @@ export function AnalyticsFilters({
             <SelectField
               label="Year"
               name="year"
-              help="Data release year used for the municipality scores and indicators."
+              help={`Data release year used for the ${lowerFirst(lowerSingular)} scores and indicators.`}
               defaultValue={String(selected.year)}
               options={years.map((year) => ({
                 value: String(year),
@@ -136,19 +146,19 @@ export function AnalyticsFilters({
               }))}
             />
             <SelectField
-              label="Province"
+              label={higherSingular}
               name="province"
-              help="Limits peer comparisons and maps to one province, or keeps the national view."
+              help={`Limits peer comparisons and maps to one ${lowerFirst(higherSingular)}, or keeps the national view.`}
               defaultValue={selected.province}
               options={provinces.map((province) => ({
                 value: province,
-                label: province === "all" ? "All provinces" : province,
+                label: province === "all" ? `All ${lowerFirst(higherPlural)}` : province,
               }))}
             />
             <SelectField
-              label="Municipality"
+              label={lowerSingular}
               name="municipality"
-              help="The highlighted municipality used in charts, maps, summaries, and AI planning context."
+              help={`The highlighted ${lowerFirst(lowerSingular)} used in charts, maps, summaries, and AI planning context.`}
               defaultValue={selected.municipalityId}
               options={municipalities.map((municipality) => ({
                 value: municipality.id,

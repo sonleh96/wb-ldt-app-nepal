@@ -4,9 +4,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Plotly3DChart } from "@/components/analytics/plotly-chart";
 import { useTheme } from "@/components/theme/theme-provider";
+import type { AdminLabels } from "@/lib/countries";
 
 export type Scatter3DCardProps = {
   selectedProvince: string;
+  adminLabels: AdminLabels;
   points: Array<{
     id: string;
     label: string;
@@ -19,7 +21,15 @@ export type Scatter3DCardProps = {
   }>;
 };
 
-export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) {
+function lowerFirst(value: string) {
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
+
+export function Scatter3DCard({
+  selectedProvince,
+  adminLabels,
+  points,
+}: Scatter3DCardProps) {
   const { isDark } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -42,6 +52,12 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
   const axisColor = isDark ? "rgba(205,225,233,0.2)" : "rgba(24,37,44,0.2)";
   const textColor = isDark ? "#edf4f6" : "#18252c";
   const mutedSeries = isDark ? "rgba(205,225,233,0.54)" : "rgba(24,37,44,0.58)";
+  const lowerSingular = adminLabels.lower.singular;
+  const lowerPlural = adminLabels.lower.plural;
+  const higherSingular = adminLabels.higher.singular;
+  const hoverLocationTemplate = adminLabels.middle
+    ? `${adminLabels.middle.singular}: %{customdata[2]}<br>${higherSingular}: %{customdata[3]}<br>`
+    : `${higherSingular}: %{customdata[3]}<br>`;
 
   return (
     <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-6 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
@@ -52,7 +68,7 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
         Prosperity, Infrastructure, and Livability
       </h2>
       <p className="mt-3 text-sm leading-7 text-[var(--muted-foreground)]">
-        Rotate, pan, and zoom the point cloud. The selected municipality is red and the rest of its province is orange.
+        Rotate, pan, and zoom the point cloud. The selected {lowerFirst(lowerSingular)} is red and the rest of its {lowerFirst(higherSingular)} is orange.
       </p>
       <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-[var(--border-soft)] bg-white/80">
         <Plotly3DChart
@@ -60,7 +76,7 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
             {
               type: "scatter3d",
               mode: "markers",
-              name: "Other municipalities",
+              name: `Other ${lowerFirst(lowerPlural)}`,
               x: others.map((point) => point.x),
               y: others.map((point) => point.y),
               z: others.map((point) => point.z),
@@ -71,13 +87,13 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
                 size: 5,
               },
               hovertemplate:
-                "<b>%{text}</b><br>District: %{customdata[2]}<br>Province: %{customdata[3]}<br>" +
+                `<b>%{text}</b><br>${hoverLocationTemplate}` +
                 "Prosperity: %{x:.2f}<br>Infrastructure: %{y:.2f}<br>Livability: %{z:.2f}<extra></extra>",
             },
             {
               type: "scatter3d",
               mode: "markers",
-              name: "Same province",
+              name: `Same ${lowerFirst(higherSingular)}`,
               x: sameProvince.map((point) => point.x),
               y: sameProvince.map((point) => point.y),
               z: sameProvince.map((point) => point.z),
@@ -89,13 +105,13 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
                 line: { color: "#9a4d00", width: 0.6 },
               },
               hovertemplate:
-                "<b>%{text}</b><br>District: %{customdata[2]}<br>Province: %{customdata[3]}<br>" +
+                `<b>%{text}</b><br>${hoverLocationTemplate}` +
                 "Prosperity: %{x:.2f}<br>Infrastructure: %{y:.2f}<br>Livability: %{z:.2f}<extra></extra>",
             },
             {
               type: "scatter3d",
               mode: "markers",
-              name: "Highlighted municipality",
+              name: `Highlighted ${lowerFirst(lowerSingular)}`,
               x: highlighted.map((point) => point.x),
               y: highlighted.map((point) => point.y),
               z: highlighted.map((point) => point.z),
@@ -107,7 +123,7 @@ export function Scatter3DCard({ selectedProvince, points }: Scatter3DCardProps) 
                 line: { color: "#5f0f16", width: 1 },
               },
               hovertemplate:
-                "<b>%{text}</b><br>District: %{customdata[2]}<br>Province: %{customdata[3]}<br>" +
+                `<b>%{text}</b><br>${hoverLocationTemplate}` +
                 "Prosperity: %{x:.2f}<br>Infrastructure: %{y:.2f}<br>Livability: %{z:.2f}<extra></extra>",
             },
           ]}

@@ -2,11 +2,24 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   ADMIN_CANONICAL_MAPPINGS,
-  buildNepalAnalyticsData,
+  buildCountryAnalyticsData,
+  buildReleaseForYear,
+  getCountryConfigs,
 } from "./lib/nepal-data.mjs";
 import { loadLocalEnv } from "./lib/load-env.mjs";
 
 await loadLocalEnv();
+
+const DEFAULT_CHUNK_SIZE = 1000;
+
+function getArgValue(name, fallback) {
+  const index = process.argv.indexOf(name);
+  if (index === -1) {
+    return fallback;
+  }
+
+  return process.argv[index + 1] ?? fallback;
+}
 
 function isMissingRelationError(error) {
   return error?.code === "PGRST205" || error?.code === "42P01";
@@ -20,6 +33,41 @@ function requireEnv(name) {
   return value;
 }
 
+function uniqueBy(items, getKey) {
+  return [...new Map(items.map((item) => [getKey(item), item])).values()];
+}
+
+function chunkRows(rows, size = DEFAULT_CHUNK_SIZE) {
+  const chunks = [];
+  for (let index = 0; index < rows.length; index += size) {
+    chunks.push(rows.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function upsertRows(table, rows, options, chunkSize = DEFAULT_CHUNK_SIZE) {
+  for (const chunk of chunkRows(rows, chunkSize)) {
+    const { error } = await supabase
+      .schema("analytics")
+      .from(table)
+      .upsert(chunk, options);
+
+    if (error) {
+      throw error;
+    }
+  }
+}
+
+async function insertRows(table, rows, chunkSize = DEFAULT_CHUNK_SIZE) {
+  for (const chunk of chunkRows(rows, chunkSize)) {
+    const { error } = await supabase.schema("analytics").from(table).insert(chunk);
+
+    if (error) {
+      throw error;
+    }
+  }
+}
+
 const supabase = createClient(
   requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
   requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
@@ -31,7 +79,9 @@ const supabase = createClient(
   },
 );
 
-const analyticsData = await buildNepalAnalyticsData();
+const countryArg = getArgValue("--country", "NPL");
+const configs = getCountryConfigs(countryArg);
+const firstAnalyticsData = await buildCountryAnalyticsData(configs[0].code);
 const rawAdminColumnByCanonicalLabel = Object.fromEntries(
   Object.entries(ADMIN_CANONICAL_MAPPINGS).map(([raw, canonical]) => [
     canonical,
@@ -39,56 +89,7 @@ const rawAdminColumnByCanonicalLabel = Object.fromEntries(
   ]),
 );
 
-const releasePayload = {
-  release_key: analyticsData.release.key,
-  year: analyticsData.release.year,
-  label: `Nepal LDT ${analyticsData.release.year}`,
-  admin_file_name: analyticsData.release.adminFileName,
-  score_file_name: analyticsData.release.scoreFileName,
-  geojson_file_name: analyticsData.release.geojsonFileName,
-  is_active: true,
-};
-
-const { data: releaseRows, error: releaseError } = await supabase
-  .schema("analytics")
-  .from("dataset_releases")
-  .upsert(releasePayload, { onConflict: "release_key" })
-  .select("id")
-  .limit(1);
-
-if (releaseError) {
-  throw releaseError;
-}
-
-const releaseId = releaseRows[0].id;
-
-const municipalitiesPayload = analyticsData.municipalities.map((municipality) => ({
-  municipality: municipality.municipality,
-  district: municipality.district,
-  province: municipality.province,
-  municipality_slug: municipality.slug.municipality,
-  district_slug: municipality.slug.district,
-  province_slug: municipality.slug.province,
-  composite_key: municipality.compositeKey,
-}));
-
-const { data: municipalityRows, error: municipalityError } = await supabase
-  .schema("analytics")
-  .from("municipalities")
-  .upsert(municipalitiesPayload, {
-    onConflict: "composite_key",
-  })
-  .select("id, composite_key");
-
-if (municipalityError) {
-  throw municipalityError;
-}
-
-const municipalityIdByKey = new Map(
-  municipalityRows.map((row) => [row.composite_key, row.id]),
-);
-
-const indicatorPayload = analyticsData.indicatorDefinitions.map((indicator) => ({
+const indicatorPayload = firstAnalyticsData.indicatorDefinitions.map((indicator) => ({
   id: indicator.id,
   canonical_name: indicator.label,
   raw_admin_column: rawAdminColumnByCanonicalLabel[indicator.label] ?? null,
@@ -107,7 +108,7 @@ if (indicatorError) {
   throw indicatorError;
 }
 
-const scoreComponentPayload = analyticsData.scoreDefinitions.flatMap((definition) =>
+const scoreComponentPayload = firstAnalyticsData.scoreDefinitions.flatMap((definition) =>
   definition.componentIds.map((componentId, index) => ({
     id: componentId,
     canonical_name: definition.componentLabels[index] ?? componentId,
@@ -131,7 +132,7 @@ if (scoreComponentError) {
   throw scoreComponentError;
 }
 
-const sourcePayload = analyticsData.indicatorDefinitions.flatMap((indicator) =>
+const sourcePayload = firstAnalyticsData.indicatorDefinitions.flatMap((indicator) =>
   indicator.sources.map((source, index) => ({
     indicator_id: indicator.id,
     label: source.label,
@@ -141,116 +142,153 @@ const sourcePayload = analyticsData.indicatorDefinitions.flatMap((indicator) =>
 );
 
 await supabase.schema("analytics").from("indicator_sources").delete().gt("id", 0);
-const { error: sourceError } = await supabase
-  .schema("analytics")
-  .from("indicator_sources")
-  .insert(sourcePayload);
+await insertRows("indicator_sources", sourcePayload);
 
-if (sourceError) {
-  throw sourceError;
-}
+for (const config of configs) {
+  const analyticsData =
+    config.code === configs[0].code
+      ? firstAnalyticsData
+      : await buildCountryAnalyticsData(config.code);
+  const latestYear = analyticsData.years[analyticsData.years.length - 1];
+  const releasePayload = analyticsData.years.map((year) => {
+    const release = buildReleaseForYear(config, year);
 
-const indicatorValuePayload = analyticsData.municipalities.flatMap((municipality) =>
-  Object.entries(municipality.indicators).map(([indicatorId, numericValue]) => ({
-    release_id: releaseId,
-    municipality_id: municipalityIdByKey.get(municipality.compositeKey),
-    indicator_id: indicatorId,
-    year: municipality.year,
-    numeric_value: numericValue,
-  })),
-);
+    return {
+      country_code: config.code,
+      release_key: release.key,
+      year: release.year,
+      label: `${config.name} LDT ${release.year}`,
+      admin_file_name: release.adminFileName,
+      score_file_name: release.scoreFileName,
+      geojson_file_name: release.geojsonFileName,
+      is_active: release.year === latestYear,
+    };
+  });
 
-const { error: indicatorValueError } = await supabase
-  .schema("analytics")
-  .from("municipality_indicator_values")
-  .upsert(indicatorValuePayload, {
+  const { data: releaseRows, error: releaseError } = await supabase
+    .schema("analytics")
+    .from("dataset_releases")
+    .upsert(releasePayload, { onConflict: "country_code,release_key" })
+    .select("id, year");
+
+  if (releaseError) {
+    throw releaseError;
+  }
+
+  const releaseIdByYear = new Map(releaseRows.map((row) => [row.year, row.id]));
+  const municipalities = uniqueBy(
+    analyticsData.municipalities,
+    (municipality) => municipality.compositeKey,
+  );
+  const municipalitiesPayload = municipalities.map((municipality) => ({
+    country_code: config.code,
+    municipality: municipality.municipality,
+    district: municipality.district,
+    province: municipality.province,
+    municipality_slug: municipality.slug.municipality,
+    district_slug: municipality.slug.district,
+    province_slug: municipality.slug.province,
+    composite_key: municipality.compositeKey,
+  }));
+
+  const { data: municipalityRows, error: municipalityError } = await supabase
+    .schema("analytics")
+    .from("municipalities")
+    .upsert(municipalitiesPayload, {
+      onConflict: "country_code,composite_key",
+    })
+    .select("id, composite_key");
+
+  if (municipalityError) {
+    throw municipalityError;
+  }
+
+  const municipalityIdByKey = new Map(
+    municipalityRows.map((row) => [row.composite_key, row.id]),
+  );
+
+  const indicatorValuePayload = analyticsData.municipalities.flatMap((municipality) =>
+    Object.entries(municipality.indicators).map(([indicatorId, numericValue]) => ({
+      release_id: releaseIdByYear.get(municipality.year),
+      municipality_id: municipalityIdByKey.get(municipality.compositeKey),
+      indicator_id: indicatorId,
+      year: municipality.year,
+      numeric_value: numericValue,
+    })),
+  );
+
+  await upsertRows("municipality_indicator_values", indicatorValuePayload, {
     onConflict: "release_id,municipality_id,indicator_id",
   });
 
-if (indicatorValueError) {
-  throw indicatorValueError;
-}
+  const scoreValuePayload = analyticsData.municipalities.flatMap((municipality) =>
+    analyticsData.scoreDefinitions.map((definition) => ({
+      release_id: releaseIdByYear.get(municipality.year),
+      municipality_id: municipalityIdByKey.get(municipality.compositeKey),
+      score_id: definition.id,
+      year: municipality.year,
+      score_value: municipality.scores[definition.id],
+    })),
+  );
 
-const scoreValuePayload = analyticsData.municipalities.flatMap((municipality) =>
-  analyticsData.scoreDefinitions.map((definition) => ({
-    release_id: releaseId,
-    municipality_id: municipalityIdByKey.get(municipality.compositeKey),
-    score_id: definition.id,
-    year: municipality.year,
-    score_value: municipality.scores[definition.id],
-  })),
-);
-
-const { error: scoreValueError } = await supabase
-  .schema("analytics")
-  .from("municipality_score_values")
-  .upsert(scoreValuePayload, {
+  await upsertRows("municipality_score_values", scoreValuePayload, {
     onConflict: "release_id,municipality_id,score_id",
   });
 
-if (scoreValueError) {
-  throw scoreValueError;
-}
+  const scoreComponentValuePayload = analyticsData.municipalities.flatMap((municipality) =>
+    Object.entries(municipality.scoreComponents).map(([componentId, scoreValue]) => ({
+      release_id: releaseIdByYear.get(municipality.year),
+      municipality_id: municipalityIdByKey.get(municipality.compositeKey),
+      component_id: componentId,
+      year: municipality.year,
+      score_value: scoreValue,
+    })),
+  );
 
-const scoreComponentValuePayload = analyticsData.municipalities.flatMap((municipality) =>
-  Object.entries(municipality.scoreComponents).map(([componentId, scoreValue]) => ({
-    release_id: releaseId,
+  try {
+    await upsertRows("municipality_score_component_values", scoreComponentValuePayload, {
+      onConflict: "release_id,municipality_id,component_id",
+    });
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      throw new Error(
+        "Missing analytics.municipality_score_component_values. Apply supabase/migrations/0003_component_and_context_tables.sql and rerun npm run ingest:supabase.",
+      );
+    }
+    throw error;
+  }
+
+  const contextValuePayload = analyticsData.municipalities.map((municipality) => ({
+    release_id: releaseIdByYear.get(municipality.year),
     municipality_id: municipalityIdByKey.get(municipality.compositeKey),
-    component_id: componentId,
     year: municipality.year,
-    score_value: scoreValue,
-  })),
-);
+    population:
+      municipality.context.population === null
+        ? null
+        : Math.round(municipality.context.population),
+    total_land_area_km2: municipality.context.totalLandAreaKm2,
+    total_road_length_km: municipality.context.totalRoadLengthKm,
+    total_railway_length_km: municipality.context.totalRailwayLengthKm,
+    road_flood_risk_km: municipality.context.roadFloodRiskKm,
+    road_heatwave_risk_km: municipality.context.roadHeatwaveRiskKm,
+    railway_flood_risk_km: municipality.context.railwayFloodRiskKm,
+    railway_heatwave_risk_km: municipality.context.railwayHeatwaveRiskKm,
+  }));
 
-const { error: scoreComponentValueError } = await supabase
-  .schema("analytics")
-  .from("municipality_score_component_values")
-  .upsert(scoreComponentValuePayload, {
-    onConflict: "release_id,municipality_id,component_id",
-  });
-
-if (scoreComponentValueError) {
-  if (isMissingRelationError(scoreComponentValueError)) {
-    throw new Error(
-      "Missing analytics.municipality_score_component_values. Apply supabase/migrations/0003_component_and_context_tables.sql and rerun npm run ingest:supabase.",
-    );
+  try {
+    await upsertRows("municipality_context_values", contextValuePayload, {
+      onConflict: "release_id,municipality_id",
+    });
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      throw new Error(
+        "Missing analytics.municipality_context_values. Apply supabase/migrations/0003_component_and_context_tables.sql and rerun npm run ingest:supabase.",
+      );
+    }
+    throw error;
   }
-  throw scoreComponentValueError;
+
+  console.log(
+    `Ingested ${config.name} analytics releases ${analyticsData.years.join(", ")} with ${municipalities.length} admin units.`,
+  );
 }
-
-const contextValuePayload = analyticsData.municipalities.map((municipality) => ({
-  release_id: releaseId,
-  municipality_id: municipalityIdByKey.get(municipality.compositeKey),
-  year: municipality.year,
-  population:
-    municipality.context.population === null
-      ? null
-      : Math.round(municipality.context.population),
-  total_land_area_km2: municipality.context.totalLandAreaKm2,
-  total_road_length_km: municipality.context.totalRoadLengthKm,
-  total_railway_length_km: municipality.context.totalRailwayLengthKm,
-  road_flood_risk_km: municipality.context.roadFloodRiskKm,
-  road_heatwave_risk_km: municipality.context.roadHeatwaveRiskKm,
-  railway_flood_risk_km: municipality.context.railwayFloodRiskKm,
-  railway_heatwave_risk_km: municipality.context.railwayHeatwaveRiskKm,
-}));
-
-const { error: contextValueError } = await supabase
-  .schema("analytics")
-  .from("municipality_context_values")
-  .upsert(contextValuePayload, {
-    onConflict: "release_id,municipality_id",
-  });
-
-if (contextValueError) {
-  if (isMissingRelationError(contextValueError)) {
-    throw new Error(
-      "Missing analytics.municipality_context_values. Apply supabase/migrations/0003_component_and_context_tables.sql and rerun npm run ingest:supabase.",
-    );
-  }
-  throw contextValueError;
-}
-
-console.log(
-  `Ingested Nepal analytics release ${analyticsData.release.key}. Boundary geometries still need a dedicated PostGIS load path.`,
-);
