@@ -1,5 +1,12 @@
 const releases = [
   {
+    version: "Release v1.4",
+    date: "June 11, 2026",
+    notes: [
+      "Zambia and Serbia workspaces are now live, with country-specific datasets, boundaries, analytics pages, and AI-ready local/SNG planning document support.",
+    ],
+  },
+  {
     version: "Release v1.3",
     date: "May 21, 2026",
     notes: [
