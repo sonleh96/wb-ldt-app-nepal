@@ -1,9 +1,11 @@
+import type { AdminLabels } from "@/lib/countries";
 import type { ScoreWaterfallGroup } from "@/types/analytics";
 
 type ScoreWaterfallSectionProps = {
   groups: ScoreWaterfallGroup[];
   municipalityName: string;
   provinceName: string;
+  adminLabels: AdminLabels;
 };
 
 function formatValue(value: number | null, fractionDigits = 1) {
@@ -25,10 +27,12 @@ function WaterfallCard({
   group,
   municipalityName,
   provinceName,
+  adminLabels,
 }: {
   group: ScoreWaterfallGroup;
   municipalityName: string;
   provinceName: string;
+  adminLabels: AdminLabels;
 }) {
   const visibleRows = group.rows.filter(
     (row): row is typeof row & { contribution: number } => row.contribution !== null,
@@ -50,7 +54,8 @@ function WaterfallCard({
         {group.scoreLabel}
       </h2>
       <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
-        Selected municipality: {municipalityName}, {provinceName}
+        Selected {adminLabels.lower.singular.toLowerCase()}: {municipalityName},{" "}
+        {adminLabels.higher.singular}: {provinceName}
       </p>
       <p className="mt-3 text-sm leading-7 text-[var(--muted-foreground)]">
         Component impacts are shown as weighted score-point differences relative to the national average.
@@ -140,6 +145,7 @@ export function ScoreWaterfallSection({
   groups,
   municipalityName,
   provinceName,
+  adminLabels,
 }: ScoreWaterfallSectionProps) {
   return (
     <section className="space-y-6">
@@ -149,6 +155,7 @@ export function ScoreWaterfallSection({
           group={group}
           municipalityName={municipalityName}
           provinceName={provinceName}
+          adminLabels={adminLabels}
         />
       ))}
     </section>

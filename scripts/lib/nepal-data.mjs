@@ -8,9 +8,6 @@ import XLSX from "xlsx";
 const ROOT_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
 
-const ADMIN_FILE = "GPBP_LDT_NPL_admin_2.csv";
-const SCORE_FILE = "GPBP_LDT_NPL_scores_admin_2.csv";
-const GEOJSON_FILE = "GPBP_LDT_NPL_admin_2_regions.json";
 const INDICATORS_FILE = "indicators_table.xlsx";
 const GEOJSON_SIMPLIFY_TOLERANCE = 0.0008;
 
@@ -18,6 +15,75 @@ proj4.defs(
   "EPSG:6933",
   "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs",
 );
+
+export const COUNTRY_CONFIGS = {
+  NPL: {
+    code: "NPL",
+    slug: "nepal",
+    name: "Nepal",
+    releaseKeyPrefix: "npl",
+    adminFile: "GPBP_LDT_NPL_admin_2.csv",
+    scoreFile: "GPBP_LDT_NPL_scores_admin_2.csv",
+    geojsonFile: "GPBP_LDT_NPL_admin_2_regions.json",
+    analyticsOutputPath: path.join("src", "generated", "analytics-data.json"),
+    mapOutputPath: path.join("public", "data", "nepal-municipalities.geojson"),
+    adminColumns: {
+      municipality: "Municipality",
+      district: "District",
+      province: "Province",
+    },
+    geojsonColumns: {
+      municipality: "Municipality",
+      district: "District",
+      province: "Province",
+      crs: "EPSG:6933",
+    },
+  },
+  ZMB: {
+    code: "ZMB",
+    slug: "zambia",
+    name: "Zambia",
+    releaseKeyPrefix: "zmb",
+    adminFile: "GPBP_LDT_ZMB_admin_2.csv",
+    scoreFile: "GPBP_LDT_ZMB_scores_admin_2.csv",
+    geojsonFile: "GPBP_LDT_ZMB_admin_2_regions.json",
+    analyticsOutputPath: path.join("src", "generated", "zambia", "analytics-data.json"),
+    mapOutputPath: path.join("public", "data", "zambia", "municipalities.geojson"),
+    adminColumns: {
+      municipality: "District",
+      district: "Province",
+      province: "Province",
+    },
+    geojsonColumns: {
+      municipality: "NAM_2",
+      district: "NAM_1",
+      province: "NAM_1",
+      crs: "EPSG:4326",
+    },
+  },
+  SRB: {
+    code: "SRB",
+    slug: "serbia",
+    name: "Serbia",
+    releaseKeyPrefix: "srb",
+    adminFile: "GPBP_LDT_SRB_admin_2.csv",
+    scoreFile: "GPBP_LDT_SRB_scores_admin_2.csv",
+    geojsonFile: "GPBP_LDT_SRB_admin_2_regions.json",
+    analyticsOutputPath: path.join("src", "generated", "serbia", "analytics-data.json"),
+    mapOutputPath: path.join("public", "data", "serbia", "municipalities.geojson"),
+    adminColumns: {
+      municipality: "District",
+      district: "Province",
+      province: "Province",
+    },
+    geojsonColumns: {
+      municipality: "Municipality",
+      district: "District",
+      province: "District",
+      crs: "EPSG:4326",
+    },
+  },
+};
 
 export const ADMIN_CANONICAL_MAPPINGS = {
   "Accessibility to Hospitals (%)": "Accessibility to Health Services (unit: %)",
@@ -323,8 +389,12 @@ function roundCoordinate(value) {
   return Number(value.toFixed(6));
 }
 
-function transformPositionToWgs84(position) {
-  const [longitude, latitude] = proj4("EPSG:6933", "EPSG:4326", position);
+function transformPositionToWgs84(position, sourceCrs) {
+  if (sourceCrs === "EPSG:4326") {
+    return [roundCoordinate(position[0]), roundCoordinate(position[1])];
+  }
+
+  const [longitude, latitude] = proj4(sourceCrs, "EPSG:4326", position);
   return [roundCoordinate(longitude), roundCoordinate(latitude)];
 }
 
@@ -465,19 +535,19 @@ function simplifyRing(points, tolerance) {
   return closedSimplified;
 }
 
-function transformLinearRingToWgs84(ring) {
+function transformLinearRingToWgs84(ring, sourceCrs) {
   return simplifyRing(
-    ring.map((position) => transformPositionToWgs84(position)),
+    ring.map((position) => transformPositionToWgs84(position, sourceCrs)),
     GEOJSON_SIMPLIFY_TOLERANCE,
   );
 }
 
-function transformGeometryToWgs84(geometry) {
+function transformGeometryToWgs84(geometry, sourceCrs) {
   if (geometry.type === "Polygon") {
     return {
       type: "Polygon",
       coordinates: geometry.coordinates.map((ring) =>
-        transformLinearRingToWgs84(ring),
+        transformLinearRingToWgs84(ring, sourceCrs),
       ),
     };
   }
@@ -486,7 +556,7 @@ function transformGeometryToWgs84(geometry) {
     return {
       type: "MultiPolygon",
       coordinates: geometry.coordinates.map((polygon) =>
-        polygon.map((ring) => transformLinearRingToWgs84(ring)),
+        polygon.map((ring) => transformLinearRingToWgs84(ring, sourceCrs)),
       ),
     };
   }
@@ -494,8 +564,32 @@ function transformGeometryToWgs84(geometry) {
   return geometry;
 }
 
-function getCompositeKey(record) {
-  return [record.Province, record.District, record.Municipality].join("::");
+function cleanLabel(value) {
+  return String(value ?? "").trim();
+}
+
+function getAdminHierarchy(record, columns) {
+  const municipality = cleanLabel(record[columns.municipality]);
+  const province = cleanLabel(record[columns.province]);
+  const district = cleanLabel(record[columns.district]) || province;
+
+  return {
+    municipality,
+    district,
+    province,
+  };
+}
+
+function getCompositeKeyFromHierarchy(hierarchy) {
+  return [hierarchy.province, hierarchy.district, hierarchy.municipality].join("::");
+}
+
+function getCompositeKey(record, columns) {
+  return getCompositeKeyFromHierarchy(getAdminHierarchy(record, columns));
+}
+
+function getTemporalCompositeKey(record, columns) {
+  return `${cleanLabel(record.Year)}::${getCompositeKey(record, columns)}`;
 }
 
 async function readCsv(fileName) {
@@ -556,10 +650,11 @@ function buildContextFields(adminRow) {
   };
 }
 
-function projectMunicipality(adminRow, scoreRow, indicatorDefinitions, scoreDefinitions) {
+function projectMunicipality(config, adminRow, scoreRow, indicatorDefinitions, scoreDefinitions) {
   const indicators = {};
   const scoreComponents = {};
   const scores = {};
+  const hierarchy = getAdminHierarchy(adminRow, config.adminColumns);
 
   for (const [rawColumn, canonicalLabel] of Object.entries(ADMIN_CANONICAL_MAPPINGS)) {
     const definition = indicatorDefinitions.find((item) => item.label === canonicalLabel);
@@ -571,7 +666,7 @@ function projectMunicipality(adminRow, scoreRow, indicatorDefinitions, scoreDefi
   }
 
   for (const [rawColumn, canonicalLabel] of Object.entries(SCORE_CANONICAL_MAPPINGS)) {
-    const value = toNumber(scoreRow[rawColumn]);
+    const value = toNumber(scoreRow?.[rawColumn]);
     const metricId = createScoreMetricId(canonicalLabel);
 
     if (canonicalLabel.endsWith("Score") && !scoreDefinitions.some((item) => item.label === canonicalLabel)) {
@@ -585,15 +680,15 @@ function projectMunicipality(adminRow, scoreRow, indicatorDefinitions, scoreDefi
   }
 
   return {
-    id: slugify(`${adminRow.Province}-${adminRow.District}-${adminRow.Municipality}`),
-    municipality: adminRow.Municipality,
-    district: adminRow.District,
-    province: adminRow.Province,
-    compositeKey: getCompositeKey(adminRow),
+    id: slugify(`${config.code}-${hierarchy.province}-${hierarchy.district}-${hierarchy.municipality}`),
+    municipality: hierarchy.municipality,
+    district: hierarchy.district,
+    province: hierarchy.province,
+    compositeKey: getCompositeKeyFromHierarchy(hierarchy),
     slug: {
-      municipality: slugify(adminRow.Municipality),
-      district: slugify(adminRow.District),
-      province: slugify(adminRow.Province),
+      municipality: slugify(hierarchy.municipality),
+      district: slugify(hierarchy.district),
+      province: slugify(hierarchy.province),
     },
     year: Number(adminRow.Year),
     mapAvailable: false,
@@ -651,11 +746,48 @@ function buildProvinceSummary(municipalities, scoreDefinitions) {
     .sort((a, b) => a.province.localeCompare(b.province));
 }
 
-export async function buildNepalAnalyticsData() {
+export function normalizeCountryCode(country) {
+  const value = String(country ?? "NPL").trim().toLowerCase();
+  const match = Object.values(COUNTRY_CONFIGS).find(
+    (config) => config.code.toLowerCase() === value || config.slug === value,
+  );
+
+  if (!match) {
+    throw new Error(`Unsupported country: ${country}`);
+  }
+
+  return match.code;
+}
+
+export function getCountryConfig(country = "NPL") {
+  return COUNTRY_CONFIGS[normalizeCountryCode(country)];
+}
+
+export function getCountryConfigs(country = "all") {
+  if (String(country).trim().toLowerCase() === "all") {
+    return Object.values(COUNTRY_CONFIGS);
+  }
+
+  return [getCountryConfig(country)];
+}
+
+export function buildReleaseForYear(config, year) {
+  return {
+    key: `${config.releaseKeyPrefix}-${year}-v1`,
+    year,
+    adminFileName: config.adminFile,
+    scoreFileName: config.scoreFile,
+    geojsonFileName: config.geojsonFile,
+    indicatorWorkbookFileName: INDICATORS_FILE,
+  };
+}
+
+export async function buildCountryAnalyticsData(country = "NPL") {
+  const config = getCountryConfig(country);
   const [adminRows, scoreRows, geojson, indicatorWorkbookRows] = await Promise.all([
-    readCsv(ADMIN_FILE),
-    readCsv(SCORE_FILE),
-    readGeojson(GEOJSON_FILE),
+    readCsv(config.adminFile),
+    readCsv(config.scoreFile),
+    readGeojson(config.geojsonFile),
     readIndicatorWorkbook(INDICATORS_FILE),
   ]);
 
@@ -666,24 +798,39 @@ export async function buildNepalAnalyticsData() {
     componentIds: item.componentLabels.map((label) => createScoreMetricId(label)),
   }));
 
-  const scoreLookup = new Map(scoreRows.map((row) => [getCompositeKey(row), row]));
+  const scoreLookup = new Map(
+    scoreRows.map((row) => [getTemporalCompositeKey(row, config.adminColumns), row]),
+  );
 
   const municipalities = adminRows.map((adminRow) =>
     projectMunicipality(
+      config,
       adminRow,
-      scoreLookup.get(getCompositeKey(adminRow)),
+      scoreLookup.get(getTemporalCompositeKey(adminRow, config.adminColumns)),
       indicatorDefinitions,
       scoreDefinitions,
     ),
   );
 
-  const analyticsKeys = new Set(municipalities.map((municipality) => municipality.compositeKey));
+  const years = [...new Set(municipalities.map((municipality) => municipality.year))]
+    .sort((a, b) => a - b);
+  const latestYear = years[years.length - 1] ?? Number(adminRows[0]?.Year ?? 2025);
+  const latestMunicipalities = municipalities.filter(
+    (municipality) => municipality.year === latestYear,
+  );
+  const analyticsKeys = new Set(
+    latestMunicipalities.map((municipality) => municipality.compositeKey),
+  );
   const geoFeatures = geojson.features.map((feature) => ({
     ...feature,
-    compositeKey: getCompositeKey(feature.properties),
+    compositeKey: getCompositeKey(feature.properties, config.geojsonColumns),
   }));
   const matchedFeatures = geoFeatures.filter((feature) => analyticsKeys.has(feature.compositeKey));
-  const boundaryOnlyFeatures = geoFeatures.filter((feature) => !analyticsKeys.has(feature.compositeKey));
+  const boundaryOnlyKeys = new Set(
+    geoFeatures
+      .filter((feature) => !analyticsKeys.has(feature.compositeKey))
+      .map((feature) => feature.compositeKey),
+  );
   const boundaryFeatureKeys = new Set(matchedFeatures.map((feature) => feature.compositeKey));
 
   for (const municipality of municipalities) {
@@ -716,19 +863,12 @@ export async function buildNepalAnalyticsData() {
 
   return {
     generatedAt: new Date().toISOString(),
-    release: {
-      key: "npl-2025-v1",
-      year: Number(adminRows[0]?.Year ?? 2025),
-      adminFileName: ADMIN_FILE,
-      scoreFileName: SCORE_FILE,
-      geojsonFileName: GEOJSON_FILE,
-      indicatorWorkbookFileName: INDICATORS_FILE,
-    },
+    release: buildReleaseForYear(config, latestYear),
     coverage: {
-      analyticsMunicipalityCount: municipalities.length,
-      mapMunicipalityCount: matchedFeatures.length,
-      analyticsOnlyCount: municipalities.length - matchedFeatures.length,
-      boundaryOnlyCount: boundaryOnlyFeatures.length,
+      analyticsMunicipalityCount: latestMunicipalities.length,
+      mapMunicipalityCount: boundaryFeatureKeys.size,
+      analyticsOnlyCount: latestMunicipalities.length - boundaryFeatureKeys.size,
+      boundaryOnlyCount: boundaryOnlyKeys.size,
     },
     metricIds: {
       defaultMapMetricId: "prosperity_score",
@@ -743,30 +883,73 @@ export async function buildNepalAnalyticsData() {
     nationalAverages,
     provinceSummary,
     municipalities,
-    mapFeatureKeys: matchedFeatures.map((feature) => feature.compositeKey),
+    mapFeatureKeys: [...boundaryFeatureKeys],
   };
 }
 
-export async function buildMatchedGeojson() {
-  const dataset = await buildNepalAnalyticsData();
-  const geojson = await readGeojson(GEOJSON_FILE);
+function polygonsFromGeometry(geometry) {
+  if (geometry.type === "Polygon") {
+    return [geometry.coordinates];
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates;
+  }
+
+  return [];
+}
+
+export async function buildCountryMatchedGeojson(country = "NPL") {
+  const config = getCountryConfig(country);
+  const dataset = await buildCountryAnalyticsData(config.code);
+  const geojson = await readGeojson(config.geojsonFile);
   const allowedKeys = new Set(dataset.mapFeatureKeys);
+  const featuresByKey = new Map();
+
+  for (const feature of geojson.features) {
+    const compositeKey = getCompositeKey(feature.properties, config.geojsonColumns);
+    if (!allowedKeys.has(compositeKey)) {
+      continue;
+    }
+
+    const hierarchy = getAdminHierarchy(feature.properties, config.geojsonColumns);
+    const transformedGeometry = transformGeometryToWgs84(
+      feature.geometry,
+      config.geojsonColumns.crs,
+    );
+    const existing = featuresByKey.get(compositeKey) ?? {
+      hierarchy,
+      polygons: [],
+    };
+
+    existing.polygons.push(...polygonsFromGeometry(transformedGeometry));
+    featuresByKey.set(compositeKey, existing);
+  }
 
   return {
     type: "FeatureCollection",
-    features: geojson.features
-      .filter((feature) => allowedKeys.has(getCompositeKey(feature.properties)))
-      .map((feature) => ({
-        type: "Feature",
-        properties: {
-          Municipality: feature.properties.Municipality,
-          District: feature.properties.District,
-          Province: feature.properties.Province,
-          compositeKey: getCompositeKey(feature.properties),
-        },
-        geometry: transformGeometryToWgs84(feature.geometry),
-      })),
+    features: [...featuresByKey.entries()].map(([compositeKey, entry]) => ({
+      type: "Feature",
+      properties: {
+        Municipality: entry.hierarchy.municipality,
+        District: entry.hierarchy.district,
+        Province: entry.hierarchy.province,
+        compositeKey,
+      },
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: entry.polygons,
+      },
+    })),
   };
+}
+
+export async function buildNepalAnalyticsData() {
+  return buildCountryAnalyticsData("NPL");
+}
+
+export async function buildMatchedGeojson(country = "NPL") {
+  return buildCountryMatchedGeojson(country);
 }
 
 export function createMetricIdFromLabel(label) {

@@ -1,9 +1,11 @@
 import { ScoreStatCard } from "@/components/analytics/score-stat-card";
+import type { AdminLabels } from "@/lib/countries";
 import type { MunicipalityRecord } from "@/types/analytics";
 
 type MunicipalitySummaryCardProps = {
   municipality: MunicipalityRecord;
   nationalScoreAverages: Record<string, number | null>;
+  adminLabels: AdminLabels;
   compact?: boolean;
 };
 
@@ -14,12 +16,18 @@ function formatValue(value: number | null) {
 export function MunicipalitySummaryCard({
   municipality,
   nationalScoreAverages,
+  adminLabels,
   compact = false,
 }: MunicipalitySummaryCardProps) {
+  const lowerSingular = adminLabels.lower.singular;
+  const locationLine = adminLabels.middle
+    ? `${adminLabels.middle.singular}: ${municipality.district} | ${adminLabels.higher.singular}: ${municipality.province}`
+    : `${adminLabels.higher.singular}: ${municipality.province}`;
+
   return (
     <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-6 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
       <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
-        Municipality summary
+        {lowerSingular} summary
       </p>
       <h2
         className={`mt-4 font-semibold tracking-tight text-[var(--foreground)] ${
@@ -29,7 +37,7 @@ export function MunicipalitySummaryCard({
         {municipality.municipality}
       </h2>
       <p className="mt-2 text-sm leading-7 text-[var(--muted-foreground)]">
-        {municipality.district}, {municipality.province}
+        {locationLine}
       </p>
 
       <div className={`mt-6 grid gap-4 ${compact ? "grid-cols-1" : "sm:grid-cols-3"}`}>

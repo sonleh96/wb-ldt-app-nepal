@@ -1,15 +1,14 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
-import path from "node:path";
 
 import {
   loadDocumentContext,
   loadLatestDocumentContextBySource,
   saveDocumentContext,
 } from "@/lib/ai/cache";
+import { fetchPlanDocument } from "@/lib/ai/plan-document-fetch";
+import { installPdfWorkerGlobalForNode } from "@/lib/ai/pdf-worker";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   AiDocumentContext,
@@ -18,66 +17,12 @@ import type {
 } from "@/lib/ai/types";
 
 const DOCUMENT_EXTRACTION_VERSION = "v2";
-const nodeRequire = createRequire(import.meta.url);
 
-let pdfWorkerConfigured = false;
-let pdfWorkerConfigurationPromise: Promise<void> | null = null;
 let pdfParseModulePromise: Promise<typeof import("pdf-parse")> | null = null;
 
 async function loadPdfParseModule() {
   pdfParseModulePromise ??= import("pdf-parse");
   return pdfParseModulePromise;
-}
-
-async function ensurePdfWorkerConfigured() {
-  if (pdfWorkerConfigured) {
-    return;
-  }
-
-  if (pdfWorkerConfigurationPromise) {
-    return pdfWorkerConfigurationPromise;
-  }
-
-  pdfWorkerConfigurationPromise = (async () => {
-    const pdfParseEntrypoint = nodeRequire.resolve("pdf-parse");
-    const pdfParsePackageRoot = path.resolve(path.dirname(pdfParseEntrypoint), "../../..");
-    const candidatePaths = [
-      path.join(pdfParsePackageRoot, "dist/pdf-parse/cjs/pdf.worker.mjs"),
-      path.join(pdfParsePackageRoot, "dist/worker/pdf.worker.mjs"),
-      path.join(pdfParsePackageRoot, "dist/pdf-parse/esm/pdf.worker.mjs"),
-      path.join(process.cwd(), "node_modules/pdf-parse/dist/pdf-parse/cjs/pdf.worker.mjs"),
-      path.join(process.cwd(), "node_modules/pdf-parse/dist/worker/pdf.worker.mjs"),
-    ];
-
-    let workerBuffer: Buffer | null = null;
-
-    for (const workerPath of candidatePaths) {
-      try {
-        workerBuffer = await readFile(workerPath);
-        break;
-      } catch (error) {
-        if (
-          !error ||
-          typeof error !== "object" ||
-          !("code" in error) ||
-          error.code !== "ENOENT"
-        ) {
-          throw error;
-        }
-      }
-    }
-
-    if (!workerBuffer) {
-      throw new Error("Unable to locate the pdf-parse worker file in the deployed runtime.");
-    }
-    const workerSource = `data:text/javascript;base64,${workerBuffer.toString("base64")}`;
-
-    const { PDFParse } = await loadPdfParseModule();
-    PDFParse.setWorker(workerSource);
-    pdfWorkerConfigured = true;
-  })();
-
-  return pdfWorkerConfigurationPromise;
 }
 
 function toFingerprint(input: string) {
@@ -111,6 +56,7 @@ function chooseProvincePlan(candidates: ProvincePlanCandidate[]) {
 }
 
 type PlanDocumentSourceRow = {
+  country_code: AiDocumentContext["countryCode"];
   plan_level: "province" | "national";
   province: string | null;
   title: string;
@@ -123,6 +69,7 @@ type PlanDocumentSourceRow = {
 };
 
 type PlanDocumentSource = {
+  countryCode: AiDocumentContext["countryCode"];
   planLevel: "province" | "national";
   province: string | null;
   title: string;
@@ -143,7 +90,7 @@ function isMissingRelationError(error: unknown) {
   return code === "PGRST205" || code === "42P01";
 }
 
-let planDocumentSourcesCache: PlanDocumentSource[] | null = null;
+const planDocumentSourcesCache = new Map<AiDocumentContext["countryCode"], PlanDocumentSource[]>();
 
 function getScoreThemeFromScoreId(scoreId: string) {
   const normalized = scoreId.toLowerCase();
@@ -163,17 +110,20 @@ function getScoreThemeFromScoreId(scoreId: string) {
   return null;
 }
 
-async function loadPlanDocumentSources(): Promise<PlanDocumentSource[]> {
-  if (planDocumentSourcesCache !== null) {
-    return planDocumentSourcesCache;
+async function loadPlanDocumentSources(
+  countryCode: AiDocumentContext["countryCode"],
+): Promise<PlanDocumentSource[]> {
+  const cached = planDocumentSourcesCache.get(countryCode);
+
+  if (cached) {
+    return cached;
   }
 
   const supabase = getSupabaseServerClient().schema("analytics");
   const { data, error } = await supabase
     .from("plan_document_sources")
-    .select("plan_level, province, title, link, notes, priority, document_type, score_theme, is_active")
-    .eq("country", "Nepal")
-    .eq("source_sheet", "Nepal")
+    .select("country_code, plan_level, province, title, link, notes, priority, document_type, score_theme, is_active")
+    .eq("country_code", countryCode)
     .eq("is_active", true)
     .order("plan_level", { ascending: true })
     .order("province", { ascending: true })
@@ -189,7 +139,8 @@ async function loadPlanDocumentSources(): Promise<PlanDocumentSource[]> {
     throw error;
   }
 
-  planDocumentSourcesCache = ((data ?? []) as PlanDocumentSourceRow[]).map((row) => ({
+  const sources = ((data ?? []) as PlanDocumentSourceRow[]).map((row) => ({
+    countryCode: row.country_code,
     planLevel: row.plan_level,
     province: row.province,
     title: row.title,
@@ -200,22 +151,27 @@ async function loadPlanDocumentSources(): Promise<PlanDocumentSource[]> {
     scoreTheme: row.score_theme,
     isActive: row.is_active,
   }));
-
-  if (planDocumentSourcesCache.length === 0) {
+  if (sources.length === 0) {
     throw new Error(
-      "No Nepal plan-document source rows were found in analytics.plan_document_sources. Run the plan-source migration and ingest first.",
+      `No ${countryCode} plan-document source rows were found in analytics.plan_document_sources. Run the plan-source ingest first.`,
     );
   }
 
-  return planDocumentSourcesCache;
+  planDocumentSourcesCache.set(countryCode, sources);
+  return sources;
 }
 
-export async function loadProvincePlanCandidates(): Promise<ProvincePlanCandidate[]> {
-  const sources = await loadPlanDocumentSources();
+export async function loadProvincePlanCandidates(
+  countryCode: AiDocumentContext["countryCode"],
+): Promise<ProvincePlanCandidate[]> {
+  const sources = await loadPlanDocumentSources(countryCode);
   const provincePlanCandidates = sources
     .filter((source) => source.planLevel === "province" && source.province)
     .map((source) => ({
+      countryCode: source.countryCode,
       province: source.province ?? "",
+      planUnitName: source.province ?? "",
+      planUnitLabel: "local/SNG plan unit",
       title: source.title,
       link: source.link,
       notes: source.notes,
@@ -224,22 +180,22 @@ export async function loadProvincePlanCandidates(): Promise<ProvincePlanCandidat
       scoreTheme: source.scoreTheme,
     }));
 
-  if (provincePlanCandidates.length === 0) {
-    throw new Error(
-      "No Nepal province-plan source rows were found in analytics.plan_document_sources. Run the plan-source migration and ingest first.",
-    );
-  }
-
   return provincePlanCandidates;
 }
 
-export async function getProvincePlanCandidatesForProvince(province: string) {
-  const candidates = await loadProvincePlanCandidates();
+export async function getProvincePlanCandidatesForProvince(
+  countryCode: AiDocumentContext["countryCode"],
+  province: string,
+) {
+  const candidates = await loadProvincePlanCandidates(countryCode);
   return candidates.filter((candidate) => candidate.province === province);
 }
 
-export async function loadNationalPlanSources(scoreId?: string): Promise<NationalPlanSource[]> {
-  const sources = await loadPlanDocumentSources();
+export async function loadNationalPlanSources(
+  countryCode: AiDocumentContext["countryCode"],
+  scoreId?: string,
+): Promise<NationalPlanSource[]> {
+  const sources = await loadPlanDocumentSources(countryCode);
   const scoreTheme = scoreId ? getScoreThemeFromScoreId(scoreId) : null;
   const nationalPlanSources = sources
     .filter((source) => source.planLevel === "national")
@@ -256,7 +212,7 @@ export async function loadNationalPlanSources(scoreId?: string): Promise<Nationa
 
   if (nationalPlanSources.length === 0) {
     throw new Error(
-      "No Nepal national-plan source rows were found in analytics.plan_document_sources for the selected score context.",
+      `No ${countryCode} national-plan source rows were found in analytics.plan_document_sources for the selected score context.`,
     );
   }
 
@@ -264,7 +220,7 @@ export async function loadNationalPlanSources(scoreId?: string): Promise<Nationa
 }
 
 async function parsePdfFromBuffer(buffer: Buffer) {
-  await ensurePdfWorkerConfigured();
+  await installPdfWorkerGlobalForNode();
   const { PDFParse } = await loadPdfParseModule();
   const parser = new PDFParse({ data: buffer });
   const result = await parser.getText();
@@ -273,42 +229,40 @@ async function parsePdfFromBuffer(buffer: Buffer) {
 }
 
 async function parseRemoteDocument(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      "user-agent": "Nepal-LDT-AI/1.0",
-    },
-  });
+  const document = await fetchPlanDocument(url);
+  const contentType = document.contentType.toLowerCase();
+  const finalUrl = document.finalUrl.toLowerCase();
 
-  if (!response.ok) {
-    throw new Error(`Unable to fetch plan document (${response.status})`);
+  if (contentType.includes("pdf") || finalUrl.endsWith(".pdf") || url.toLowerCase().endsWith(".pdf")) {
+    return parsePdfFromBuffer(document.body);
   }
 
-  const contentType = response.headers.get("content-type") ?? "";
-
-  if (contentType.includes("pdf") || url.toLowerCase().endsWith(".pdf")) {
-    const buffer = Buffer.from(await response.arrayBuffer());
-    return parsePdfFromBuffer(buffer);
-  }
-
-  const html = await response.text();
+  const html = document.body.toString("utf8");
   return stripHtml(html);
 }
 
-function buildNationalSourceCollectionPath(sources: NationalPlanSource[]) {
+function buildNationalSourceCollectionPath(
+  countryCode: AiDocumentContext["countryCode"],
+  sources: NationalPlanSource[],
+) {
   const sourceDescriptor = sources
     .map((source) => `${source.title}|${source.link}|${source.scoreTheme ?? "all"}`)
     .join("||");
-  return `supabase://analytics.plan_document_sources/national/${toFingerprint(sourceDescriptor)}`;
+  return `supabase://analytics.plan_document_sources/${countryCode}/national/${toFingerprint(sourceDescriptor)}`;
 }
 
-export async function getNationalPlanContext(scoreId?: string): Promise<{
+export async function getNationalPlanContext(
+  countryCode: AiDocumentContext["countryCode"],
+  scoreId?: string,
+): Promise<{
   context: AiDocumentContext;
   sources: NationalPlanSource[];
 }> {
-  const sources = await loadNationalPlanSources(scoreId);
-  const sourceCollectionPath = buildNationalSourceCollectionPath(sources);
+  const sources = await loadNationalPlanSources(countryCode, scoreId);
+  const sourceCollectionPath = buildNationalSourceCollectionPath(countryCode, sources);
   const sourceFingerprint = toFingerprint(sources.map((source) => source.link).join("||"));
   const latestCached = await loadLatestDocumentContextBySource(
+    countryCode,
     "national_plan",
     null,
     sourceCollectionPath,
@@ -323,6 +277,7 @@ export async function getNationalPlanContext(scoreId?: string): Promise<{
   }
 
   const cached = await loadDocumentContext(
+    countryCode,
     "national_plan",
     null,
     sourceCollectionPath,
@@ -359,6 +314,7 @@ export async function getNationalPlanContext(scoreId?: string): Promise<{
       .join("\n\n===\n\n"),
   );
   const recached = await loadDocumentContext(
+    countryCode,
     "national_plan",
     null,
     sourceCollectionPath,
@@ -374,11 +330,12 @@ export async function getNationalPlanContext(scoreId?: string): Promise<{
   }
 
   const context: AiDocumentContext = {
+    countryCode,
     sourceType: "national_plan",
     title:
       sources.length === 1
-        ? sources[0]?.title ?? "Nepal National Plan"
-        : `Nepal national planning corpus (${sources.length} documents)`,
+        ? sources[0]?.title ?? `${countryCode} National Plan`
+        : `${countryCode} national planning corpus (${sources.length} documents)`,
     province: null,
     sourceUrlOrPath: sourceCollectionPath,
     contentMode: "full_text",
@@ -408,19 +365,24 @@ export async function getNationalPlanContext(scoreId?: string): Promise<{
   };
 }
 
-export async function getProvincePlanContext(province: string): Promise<{
+export async function getProvincePlanContext(
+  countryCode: AiDocumentContext["countryCode"],
+  province: string,
+  planUnitLabel = "local/SNG plan unit",
+): Promise<{
   context: AiDocumentContext;
   candidates: ProvincePlanCandidate[];
 }> {
-  const candidates = await getProvincePlanCandidatesForProvince(province);
+  const candidates = await getProvincePlanCandidatesForProvince(countryCode, province);
   const chosen = chooseProvincePlan(candidates);
 
   if (!chosen) {
-    throw new Error(`No province plan link found for ${province}.`);
+    throw new Error(`No local/SNG plan link found for ${province}.`);
   }
 
   const sourceUrlOrPath = chosen.link;
   const latestCached = await loadLatestDocumentContextBySource(
+    countryCode,
     "province_plan",
     province,
     sourceUrlOrPath,
@@ -435,6 +397,7 @@ export async function getProvincePlanContext(province: string): Promise<{
   }
 
   const cached = await loadDocumentContext(
+    countryCode,
     "province_plan",
     province,
     sourceUrlOrPath,
@@ -452,6 +415,7 @@ export async function getProvincePlanContext(province: string): Promise<{
   const extractedText = await parseRemoteDocument(sourceUrlOrPath);
   const contentFingerprint = toFingerprint(extractedText);
   const recached = await loadDocumentContext(
+    countryCode,
     "province_plan",
     province,
     sourceUrlOrPath,
@@ -467,8 +431,9 @@ export async function getProvincePlanContext(province: string): Promise<{
   }
 
   const context: AiDocumentContext = {
+    countryCode,
     sourceType: "province_plan",
-    title: `${province} provincial development plan`,
+    title: chosen.title || `${province} local development plan`,
     province,
     sourceUrlOrPath,
     contentMode: "full_text",
@@ -477,6 +442,7 @@ export async function getProvincePlanContext(province: string): Promise<{
     chunks: [],
     extractionMetadata: {
       notes: chosen.notes,
+      planUnitLabel,
       parser: sourceUrlOrPath.toLowerCase().endsWith(".pdf") ? "pdf-parse" : "html-strip",
       candidateCount: candidates.length,
       chunkingReady: true,

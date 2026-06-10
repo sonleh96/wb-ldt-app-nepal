@@ -1,0 +1,44 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { getCountryBySlug } from "../src/lib/countries.ts";
+
+test("Zambia exposes public country-page metadata and district/province labels", () => {
+  const country = getCountryBySlug("zambia");
+
+  assert.equal(country?.adminLabels.lower.singular, "District");
+  assert.equal(country?.adminLabels.lower.plural, "Districts");
+  assert.equal(country?.adminLabels.higher.singular, "Province");
+  assert.equal(country?.adminLabels.higher.plural, "Provinces");
+  assert.equal(country?.profile.populationMillions, 22.5);
+  assert.equal(country?.profile.areaKm2, 763027);
+  assert.equal(country?.profile.strategy.title, "8th National Development Plan");
+  assert.equal(
+    country?.profile.strategy.url,
+    "https://www.cabinet.gov.zm/newsite/wp-content/uploads/2023/12/8NDP-2022-2026.pdf",
+  );
+  assert.equal(
+    country?.planningDocuments.message,
+    "Local planning documents will be added in a later release",
+  );
+});
+
+test("Serbia exposes public country-page metadata and municipality/district labels", () => {
+  const country = getCountryBySlug("serbia");
+
+  assert.equal(country?.adminLabels.lower.singular, "Municipality");
+  assert.equal(country?.adminLabels.lower.plural, "Municipalities");
+  assert.equal(country?.adminLabels.higher.singular, "District");
+  assert.equal(country?.adminLabels.higher.plural, "Districts");
+  assert.equal(country?.profile.populationMillions, 6.7);
+  assert.equal(country?.profile.areaKm2, 312717);
+  assert.equal(country?.profile.strategy.title, "Serbia 2030 Strategy");
+  assert.equal(
+    country?.profile.strategy.url,
+    "https://rsjp.gov.rs/wp-content/uploads/Srbija-i-Agenda-2030.-februar-2024.-lat.pdf",
+  );
+  assert.equal(
+    country?.planningDocuments.message,
+    "Local planning documents will be added in a later release",
+  );
+});

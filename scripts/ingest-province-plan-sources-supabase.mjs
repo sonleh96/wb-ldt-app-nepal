@@ -1,12 +1,22 @@
-import path from "node:path";
-import { readFile } from "node:fs/promises";
-
 import { createClient } from "@supabase/supabase-js";
-import * as XLSX from "xlsx";
 
+import { getCountryConfigs } from "./lib/nepal-data.mjs";
 import { loadLocalEnv } from "./lib/load-env.mjs";
+import {
+  buildCountryPlanSourcePayloads,
+  readPlanSourceWorkbook,
+} from "./lib/plan-sources.mjs";
 
 await loadLocalEnv();
+
+function getArgValue(name, fallback) {
+  const index = process.argv.indexOf(name);
+  if (index === -1) {
+    return fallback;
+  }
+
+  return process.argv[index + 1] ?? fallback;
+}
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -16,24 +26,6 @@ function requireEnv(name) {
   }
 
   return value;
-}
-
-function rankProvincePlanPriority(notes) {
-  const value = (notes ?? "").toLowerCase();
-
-  if (value.includes("5-year")) {
-    return 1;
-  }
-
-  if (value.includes("master plan")) {
-    return 2;
-  }
-
-  if (value.includes("development plan")) {
-    return 3;
-  }
-
-  return 4;
 }
 
 function isMissingRelationError(error) {
@@ -51,53 +43,99 @@ const supabase = createClient(
   },
 );
 
-const workbookPath = path.join(process.cwd(), "data/SNG Development Plans.xlsx");
-const workbookBuffer = await readFile(workbookPath);
-const workbook = XLSX.read(workbookBuffer, { type: "buffer" });
-const sheet = workbook.Sheets.Nepal;
+const countryArg = getArgValue("--country", "NPL");
+const configs = getCountryConfigs(countryArg);
+const workbook = readPlanSourceWorkbook("data/SNG Development Plans.xlsx");
 
-if (!sheet) {
-  throw new Error("Nepal sheet not found in data/SNG Development Plans.xlsx.");
-}
+async function upsertPlanDocumentSources(rows) {
+  for (const row of rows) {
+    let query = supabase
+      .schema("analytics")
+      .from("plan_document_sources")
+      .select("id")
+      .eq("country_code", row.country_code)
+      .eq("source_sheet", row.source_sheet)
+      .eq("plan_level", row.plan_level)
+      .eq("link", row.link);
 
-const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    query = row.province ? query.eq("province", row.province) : query.is("province", null);
 
-const payload = rows
-  .map((row) => {
-    const province = String(row.Province ?? "").trim();
-    const link = String(row.Link ?? "").trim();
-    const notes = String(row.Notes ?? "").trim() || null;
+    const { data: existingRows, error: lookupError } = await query.limit(1);
 
-    if (!province || !link) {
-      return null;
+    if (lookupError) {
+      if (isMissingRelationError(lookupError)) {
+        throw new Error(
+          "Missing analytics.plan_document_sources. Apply supabase/migrations/0007_plan_document_sources.sql and supabase/migrations/0010_multi_country.sql, then rerun this ingest.",
+        );
+      }
+
+      throw lookupError;
     }
 
-    return {
-      country: "Nepal",
-      source_sheet: "Nepal",
-      province,
-      link,
-      notes,
-      priority: rankProvincePlanPriority(notes),
-    };
-  })
-  .filter(Boolean);
+    const existingId = existingRows?.[0]?.id;
 
-const { error } = await supabase
-  .schema("analytics")
-  .from("province_plan_sources")
-  .upsert(payload, {
-    onConflict: "country,source_sheet,province,link",
-  });
+    if (existingId) {
+      const { error } = await supabase
+        .schema("analytics")
+        .from("plan_document_sources")
+        .update(row)
+        .eq("id", existingId);
 
-if (error) {
-  if (isMissingRelationError(error)) {
-    throw new Error(
-      "Missing analytics.province_plan_sources. Apply supabase/migrations/0005_province_plan_sources.sql and rerun this ingest.",
+      if (error) {
+        throw error;
+      }
+    } else {
+      const { error } = await supabase
+        .schema("analytics")
+        .from("plan_document_sources")
+        .insert(row);
+
+      if (error) {
+        if (isMissingRelationError(error)) {
+          throw new Error(
+            "Missing analytics.plan_document_sources. Apply supabase/migrations/0007_plan_document_sources.sql and supabase/migrations/0010_multi_country.sql, then rerun this ingest.",
+          );
+        }
+
+        throw error;
+      }
+    }
+  }
+}
+
+for (const config of configs) {
+  const { provincePlanSources, planDocumentSources } = buildCountryPlanSourcePayloads(
+    config,
+    workbook,
+  );
+
+  if (provincePlanSources.length === 0) {
+    console.log(`No ${config.name} province/local plan source URLs to upsert.`);
+  } else {
+    const { error } = await supabase
+      .schema("analytics")
+      .from("province_plan_sources")
+      .upsert(provincePlanSources, {
+        onConflict: "country_code,source_sheet,province,link",
+      });
+
+    if (error) {
+      if (isMissingRelationError(error)) {
+        throw new Error(
+          "Missing analytics.province_plan_sources. Apply supabase/migrations/0005_province_plan_sources.sql and rerun this ingest.",
+        );
+      }
+
+      throw error;
+    }
+
+    console.log(
+      `Upserted ${provincePlanSources.length} ${config.name} plan source rows into analytics.province_plan_sources.`,
     );
   }
 
-  throw error;
+  await upsertPlanDocumentSources(planDocumentSources);
+  console.log(
+    `Upserted ${planDocumentSources.length} ${config.name} rows into analytics.plan_document_sources.`,
+  );
 }
-
-console.log(`Upserted ${payload.length} Nepal province plan source rows into analytics.province_plan_sources.`);

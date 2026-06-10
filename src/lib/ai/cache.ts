@@ -35,6 +35,7 @@ export function createFingerprint(input: unknown) {
 }
 
 export type AiStageCacheLookup = {
+  countryCode: AiDocumentContext["countryCode"];
   stage: AiStageName;
   releaseKey: string;
   year: number;
@@ -58,6 +59,7 @@ export async function loadAiStageCache(
         "stage_name, status, rendered_output, structured_output, source_references, model_name, prompt_version, invalidation_version, updated_at, error_message",
       )
       .eq("stage_name", lookup.stage)
+      .eq("country_code", lookup.countryCode)
       .eq("release_key", lookup.releaseKey)
       .eq("year", lookup.year)
       .eq("municipality_id", lookup.municipalityId)
@@ -105,6 +107,7 @@ export async function loadAiStageCache(
 
 export async function loadLatestAiStageCacheByScope({
   stage,
+  countryCode,
   releaseKey,
   year,
   municipalityId,
@@ -112,6 +115,7 @@ export async function loadLatestAiStageCacheByScope({
   scoreId,
 }: {
   stage: AiStageName;
+  countryCode: AiDocumentContext["countryCode"];
   releaseKey: string;
   year: number;
   municipalityId: string;
@@ -127,6 +131,7 @@ export async function loadLatestAiStageCacheByScope({
         "stage_name, status, rendered_output, structured_output, source_references, model_name, prompt_version, invalidation_version, updated_at, error_message",
       )
       .eq("stage_name", stage)
+      .eq("country_code", countryCode)
       .eq("release_key", releaseKey)
       .eq("year", year)
       .eq("municipality_id", municipalityId)
@@ -188,6 +193,7 @@ export async function saveAiStageCache(
     const { error } = await supabase.from("ai_stage_cache").upsert(
       {
         stage_name: lookup.stage,
+        country_code: lookup.countryCode,
         release_key: lookup.releaseKey,
         year: lookup.year,
         municipality_id: lookup.municipalityId,
@@ -206,7 +212,7 @@ export async function saveAiStageCache(
       },
       {
         onConflict:
-          "stage_name,release_key,year,municipality_id,province,score_id,model_name,prompt_version,invalidation_version,input_fingerprint",
+          "country_code,stage_name,release_key,year,municipality_id,province,score_id,model_name,prompt_version,invalidation_version,input_fingerprint",
       },
     );
 
@@ -221,6 +227,7 @@ export async function saveAiStageCache(
 }
 
 export async function loadDocumentContext(
+  countryCode: AiDocumentContext["countryCode"],
   sourceType: AiDocumentContext["sourceType"],
   province: string | null,
   sourceUrlOrPath: string,
@@ -233,8 +240,9 @@ export async function loadDocumentContext(
     const query = supabase
       .from("ai_document_contexts")
       .select(
-        "source_type, title, province, source_url_or_path, content_mode, extracted_text, passages, chunks, extraction_metadata, content_fingerprint, extraction_version",
+        "country_code, source_type, title, province, source_url_or_path, content_mode, extracted_text, passages, chunks, extraction_metadata, content_fingerprint, extraction_version",
       )
+      .eq("country_code", countryCode)
       .eq("source_type", sourceType)
       .eq("source_url_or_path", sourceUrlOrPath)
       .eq("content_fingerprint", contentFingerprint)
@@ -267,6 +275,7 @@ export async function loadDocumentContext(
 }
 
 type DocumentContextRow = {
+  country_code: AiDocumentContext["countryCode"];
   source_type: string;
   title: string;
   province: string | null;
@@ -282,6 +291,7 @@ type DocumentContextRow = {
 
 function toDocumentContext(data: DocumentContextRow): AiDocumentContext {
   return {
+    countryCode: data.country_code,
     sourceType: data.source_type as AiDocumentContext["sourceType"],
     title: data.title,
     province: data.province,
@@ -297,6 +307,7 @@ function toDocumentContext(data: DocumentContextRow): AiDocumentContext {
 }
 
 export async function loadLatestDocumentContextBySource(
+  countryCode: AiDocumentContext["countryCode"],
   sourceType: AiDocumentContext["sourceType"],
   province: string | null,
   sourceUrlOrPath: string,
@@ -308,8 +319,9 @@ export async function loadLatestDocumentContextBySource(
     const query = supabase
       .from("ai_document_contexts")
       .select(
-        "source_type, title, province, source_url_or_path, content_mode, extracted_text, passages, chunks, extraction_metadata, content_fingerprint, extraction_version",
+        "country_code, source_type, title, province, source_url_or_path, content_mode, extracted_text, passages, chunks, extraction_metadata, content_fingerprint, extraction_version",
       )
+      .eq("country_code", countryCode)
       .eq("source_type", sourceType)
       .eq("source_url_or_path", sourceUrlOrPath)
       .eq("extraction_version", extractionVersion)
@@ -344,6 +356,7 @@ export async function saveDocumentContext(context: AiDocumentContext) {
   try {
     const { error } = await supabase.from("ai_document_contexts").upsert(
       {
+        country_code: context.countryCode,
         source_type: context.sourceType,
         title: context.title,
         province: context.province,
@@ -358,7 +371,7 @@ export async function saveDocumentContext(context: AiDocumentContext) {
       },
       {
         onConflict:
-          "source_type,province,source_url_or_path,content_fingerprint,extraction_version",
+          "country_code,source_type,province,source_url_or_path,content_fingerprint,extraction_version",
       },
     );
 

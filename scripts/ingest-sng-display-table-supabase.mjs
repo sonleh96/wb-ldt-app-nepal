@@ -4,9 +4,19 @@ import { readFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import { parse } from "csv-parse/sync";
 
+import { getCountryConfig } from "./lib/nepal-data.mjs";
 import { loadLocalEnv } from "./lib/load-env.mjs";
 
 await loadLocalEnv();
+
+function getArgValue(name, fallback) {
+  const index = process.argv.indexOf(name);
+  if (index === -1) {
+    return fallback;
+  }
+
+  return process.argv[index + 1] ?? fallback;
+}
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -46,6 +56,17 @@ function parseBoolean(value) {
   return String(value ?? "").trim().toLowerCase() === "yes";
 }
 
+function resolveRowValue(row, ...columns) {
+  for (const column of columns) {
+    const value = cleanString(row[column]);
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 const supabase = createClient(
   requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
   requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
@@ -57,7 +78,8 @@ const supabase = createClient(
   },
 );
 
-const sourceFileName = "sng_display_table.csv";
+const country = getCountryConfig(getArgValue("--country", "NPL"));
+const sourceFileName = getArgValue("--file", "sng_display_table.csv");
 const csvPath = path.join(process.cwd(), "data", sourceFileName);
 const csvContent = await readFile(csvPath, "utf8");
 const rows = parse(csvContent, {
@@ -69,15 +91,27 @@ const rows = parse(csvContent, {
 
 const payload = rows
   .map((row) => {
-    const municipality = cleanString(row.Municipality);
-    const district = cleanString(row.District);
-    const province = cleanString(row.Province);
+    const municipality = resolveRowValue(
+      row,
+      "Municipality",
+      "Admin_2",
+      country.adminColumns.municipality,
+    );
+    const province = resolveRowValue(
+      row,
+      "Province",
+      "Admin_1",
+      country.adminColumns.province,
+    );
+    const district =
+      resolveRowValue(row, "District", country.adminColumns.district) ?? province;
 
     if (!municipality || !district || !province) {
       return null;
     }
 
     return {
+      country_code: country.code,
       municipality,
       district,
       province,
@@ -100,7 +134,7 @@ const { error } = await supabase
   .schema("analytics")
   .from("sng_display_table")
   .upsert(payload, {
-    onConflict: "municipality,district,province",
+    onConflict: "country_code,municipality,district,province",
   });
 
 if (error) {
@@ -113,4 +147,4 @@ if (error) {
   throw error;
 }
 
-console.log(`Upserted ${payload.length} rows into analytics.sng_display_table.`);
+console.log(`Upserted ${payload.length} ${country.name} rows into analytics.sng_display_table.`);
