@@ -171,9 +171,11 @@ function toFailedStagePayload(stage: AiStageName, payload: unknown): AiStageResp
 function PlanningEvidencePanel({
   title,
   result,
+  emptyMessage,
 }: {
   title: string;
   result?: AiStageResponsePayload;
+  emptyMessage?: string | null;
 }) {
   const extractedText = getStringValue(result?.structuredOutput.extractedText);
   const summaryText = result?.renderedOutput ?? extractedText;
@@ -211,7 +213,7 @@ function PlanningEvidencePanel({
         </p>
       ) : (
         <p className="mt-3 text-sm text-[var(--muted-foreground)]">
-          Not generated yet.
+          {emptyMessage ?? "Not generated yet."}
         </p>
       )}
       {proofText ? (
@@ -259,12 +261,13 @@ export function AiAnalyticsTab({
 
   const basePayload = useMemo(
     () => ({
+      countryCode: release.countryCode,
       releaseKey: release.key,
       year: release.year,
       municipalityId: municipality.id,
       scoreId: ai.selectedScoreId,
     }),
-    [ai.selectedScoreId, municipality.id, release.key, release.year],
+    [ai.selectedScoreId, municipality.id, release.countryCode, release.key, release.year],
   );
 
   async function runStage(
@@ -344,13 +347,17 @@ export function AiAnalyticsTab({
   }
 
   async function runPlanningContext(mode: "generate" | "regenerate") {
-    const provinceContext = await runStage("province_plan_context", mode);
-    if (provinceContext?.status !== "completed") {
+    const nationalContext = await runStage("national_plan_context", mode);
+    if (nationalContext?.status !== "completed") {
       return;
     }
 
-    const nationalContext = await runStage("national_plan_context", mode);
-    if (nationalContext?.status !== "completed") {
+    if (!ai.localPlanAvailable) {
+      return;
+    }
+
+    const provinceContext = await runStage("province_plan_context", mode);
+    if (provinceContext?.status !== "completed") {
       return;
     }
 
@@ -424,8 +431,12 @@ export function AiAnalyticsTab({
     {
       number: "2",
       title: "Plan alignment",
-      detail: "Province, national, and comparison",
-      state: getWorkflowState(planningContextStages),
+      detail: ai.localPlanAvailable
+        ? "Local/SNG, national, and comparison"
+        : "National context only until local URL exists",
+      state: ai.localPlanAvailable
+        ? getWorkflowState(planningContextStages)
+        : getWorkflowState(["national_plan_context"], { optional: true }),
     },
     {
       number: "3",
@@ -455,8 +466,8 @@ export function AiAnalyticsTab({
     <div className="space-y-5">
       <AiStageCard
         eyebrow="AI planning workflow"
-        title="Choose municipality and score"
-        description="Use the shared municipality selector in the sidebar, then choose the score theme for the AI planning workflow here. The AI flow currently supports only Prosperity, Infrastructure, and Livability."
+        title="Choose local unit and score"
+        description="Use the shared local-unit selector in the sidebar, then choose the score theme for the AI planning workflow here. The AI flow currently supports only Prosperity, Infrastructure, and Livability."
       >
         <form className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
           <input type="hidden" name="tab" value="ai" />
@@ -524,11 +535,21 @@ export function AiAnalyticsTab({
       <AiStageCard
         eyebrow="Step 2"
         title="Planning context and alignment"
-        description={`Retrieve the ${municipality.province} provincial plan context and national plan context, then compare them for the selected municipality and score theme in one run.`}
+        description={
+          ai.localPlanAvailable
+            ? `Retrieve the ${ai.localPlanUnitName} local/SNG plan context and national plan context, then compare them for the selected unit and score theme.`
+            : `No local/SNG plan URL is available for ${ai.localPlanUnitName}. You can still run national plan context; local alignment, SWOT, and recommendations remain blocked for this unit.`
+        }
         actions={
           <>
             <StageButton
-              label={isPlanningContextLoading ? "Working..." : "Run planning alignment"}
+              label={
+                isPlanningContextLoading
+                  ? "Working..."
+                  : ai.localPlanAvailable
+                    ? "Run planning alignment"
+                    : "Run national context"
+              }
               onClick={() => void runPlanningContext("generate")}
               disabled={isPlanningContextLoading}
               tone="primary"
@@ -536,15 +557,20 @@ export function AiAnalyticsTab({
             <StageButton
               label={isPlanningContextLoading ? "Working..." : "Regenerate alignment"}
               onClick={() => void runPlanningContext("regenerate")}
-              disabled={isPlanningContextLoading || !hasAnyPlanningContextResult}
+              disabled={
+                isPlanningContextLoading ||
+                !hasAnyPlanningContextResult ||
+                !ai.localPlanAvailable
+              }
             />
           </>
         }
       >
         <div className="grid gap-4 xl:grid-cols-2">
           <PlanningEvidencePanel
-            title="Provincial plan context"
+            title="Local/SNG plan context"
             result={stageResults.province_plan_context}
+            emptyMessage={ai.localPlanUnavailableMessage}
           />
           <PlanningEvidencePanel
             title="National plan context"
@@ -561,7 +587,7 @@ export function AiAnalyticsTab({
       <AiStageCard
         eyebrow="Step 3"
         title="Add current web context"
-        description="Optionally search the web for additional public context relevant to the selected municipality, province, and score. This can enrich later SWOT and recommendation stages without replacing the planning documents."
+        description="Optionally search the web for additional public context relevant to the selected unit, country, and score. This can enrich later SWOT and recommendation stages without replacing the planning documents."
         actions={buildStageActions("web_context_search", false)}
         result={stageResults.web_context_search}
         resultContent={
@@ -574,8 +600,11 @@ export function AiAnalyticsTab({
       <AiStageCard
         eyebrow="Step 4"
         title="SWOT analysis"
-        description="Generate a municipality SWOT grounded in the chosen score, the indicator narrative, the planning alignment, and any optional web context already added."
-        actions={buildStageActions("swot_analysis", !hasIndicatorNarrative || !hasAlignment)}
+        description="Generate a local-unit SWOT grounded in the chosen score, the indicator narrative, the planning alignment, and any optional web context already added."
+        actions={buildStageActions(
+          "swot_analysis",
+          !hasIndicatorNarrative || !hasAlignment || !ai.localPlanAvailable,
+        )}
         result={stageResults.swot_analysis}
         resultContent={
           stageResults.swot_analysis ? (
@@ -588,7 +617,10 @@ export function AiAnalyticsTab({
         eyebrow="Step 5"
         title="Public investment recommendations"
         description="Generate public project investment recommendations grounded in the accumulated evidence rather than in a separate concept-note stage."
-        actions={buildStageActions("investment_recommendations", !hasIndicatorNarrative || !hasAlignment || !hasSwot)}
+        actions={buildStageActions(
+          "investment_recommendations",
+          !hasIndicatorNarrative || !hasAlignment || !hasSwot || !ai.localPlanAvailable,
+        )}
         result={stageResults.investment_recommendations}
         resultContent={
           stageResults.investment_recommendations ? (

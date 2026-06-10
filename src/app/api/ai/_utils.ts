@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { validateAiStageRequestPayload } from "@/lib/ai/request";
 import type { AiStageRequestPayload } from "@/lib/ai/types";
 
 function isAiGenerationAllowed(request: Request) {
@@ -56,29 +57,21 @@ function serializeStageError(error: unknown) {
 
 export async function parseAiStageRequest(request: Request) {
   const payload = (await request.json()) as Partial<AiStageRequestPayload>;
+  const validated = validateAiStageRequestPayload(payload);
 
-  if (
-    !payload ||
-    typeof payload.releaseKey !== "string" ||
-    typeof payload.year !== "number" ||
-    typeof payload.municipalityId !== "string" ||
-    typeof payload.scoreId !== "string" ||
-    (payload.mode !== "generate" &&
-      payload.mode !== "regenerate" &&
-      payload.mode !== "load_cached")
-  ) {
+  if (!validated.ok) {
     return {
       ok: false as const,
       response: NextResponse.json(
         {
-          error: "Invalid AI stage request payload.",
+          error: validated.error,
         },
         { status: 400 },
       ),
     };
   }
 
-  if (payload.mode !== "load_cached" && !isAiGenerationAllowed(request)) {
+  if (validated.payload.mode !== "load_cached" && !isAiGenerationAllowed(request)) {
     return {
       ok: false as const,
       response: NextResponse.json(
@@ -93,7 +86,7 @@ export async function parseAiStageRequest(request: Request) {
 
   return {
     ok: true as const,
-    payload: payload as AiStageRequestPayload,
+    payload: validated.payload,
   };
 }
 

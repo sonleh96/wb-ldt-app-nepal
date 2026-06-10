@@ -45,6 +45,7 @@ function buildDocumentStageOutput(context: AiDocumentContext, sourceLabel: strin
       previewText,
     ].join("\n"),
     structuredOutput: {
+      countryCode: context.countryCode,
       sourceType: context.sourceType,
       title: context.title,
       province: context.province,
@@ -63,6 +64,7 @@ function buildDocumentStageOutput(context: AiDocumentContext, sourceLabel: strin
 function documentFromStructuredOutput(
   output: Record<string, unknown>,
   fallbackSourceType: AiDocumentContext["sourceType"],
+  fallbackCountryCode: AiDocumentContext["countryCode"],
 ): AiDocumentContext | null {
   const title = typeof output.title === "string" ? output.title : null;
   const sourceUrlOrPath =
@@ -81,6 +83,10 @@ function documentFromStructuredOutput(
   }
 
   return {
+    countryCode:
+      typeof output.countryCode === "string"
+        ? (output.countryCode as AiDocumentContext["countryCode"])
+        : fallbackCountryCode,
     sourceType:
       output.sourceType === "national_plan" || output.sourceType === "province_plan"
         ? output.sourceType
@@ -115,8 +121,8 @@ function buildStageFingerprint(stage: AiStageName, input: unknown) {
 
 function buildWebContextQuery(context: AiPipelineContext) {
   return [
-    `"${context.municipality.province}" Nepal development plan`,
-    `"${context.municipality.name}" municipality`,
+    `"${context.localPlanUnitName}" "${context.country.name}" local development plan`,
+    `"${context.municipality.name}" "${context.localPlanUnitLabel}"`,
     `"${context.score.label}"`,
     "public investment priorities",
   ].join(" ");
@@ -227,6 +233,7 @@ async function getCachedEntry(
   inputFingerprint: string,
 ) {
   const cached = await loadAiStageCache({
+    countryCode: context.country.code,
     stage,
     releaseKey: context.releaseKey,
     year: context.year,
@@ -250,6 +257,7 @@ async function persistEntry(
   response: AiStageResponsePayload,
 ) {
   await saveAiStageCache({
+    countryCode: context.country.code,
     stage,
     releaseKey: context.releaseKey,
     year: context.year,
@@ -352,12 +360,16 @@ async function getProvinceDocumentContext(context: AiPipelineContext) {
   const chosen = chooseProvincePlanUrl(context);
 
   if (!chosen) {
-    throw new Error(`No province plan link found for ${context.municipality.province}.`);
+    throw new Error(`No local/SNG plan link found for ${context.localPlanUnitName}.`);
   }
 
   try {
     const { getProvincePlanContext } = await import("@/lib/ai/documents");
-    const direct = await getProvincePlanContext(context.municipality.province);
+    const direct = await getProvincePlanContext(
+      context.country.code,
+      context.localPlanUnitName,
+      context.localPlanUnitLabel,
+    );
     return {
       document: direct.context,
       sourceReferences: [
@@ -367,7 +379,9 @@ async function getProvinceDocumentContext(context: AiPipelineContext) {
           source: direct.context.sourceUrlOrPath,
           metadata: {
             provider: "direct_parse",
-            province: context.municipality.province,
+            countryCode: context.country.code,
+            localPlanUnitName: context.localPlanUnitName,
+            localPlanUnitLabel: context.localPlanUnitLabel,
             candidates: direct.candidates,
           },
         },
@@ -381,9 +395,10 @@ async function getProvinceDocumentContext(context: AiPipelineContext) {
     }
 
     const document: AiDocumentContext = {
+      countryCode: context.country.code,
       sourceType: "province_plan",
       title: exaResult.title,
-      province: context.municipality.province,
+      province: context.localPlanUnitName,
       sourceUrlOrPath: exaResult.sourceUrlOrPath,
       contentMode: "full_text",
       extractedText: exaResult.extractedText,
@@ -401,8 +416,9 @@ async function getProvinceDocumentContext(context: AiPipelineContext) {
       extractionMetadata: {
         ...(exaResult.metadata ?? {}),
         candidateNotes: chosen.notes,
+        localPlanUnitLabel: context.localPlanUnitLabel,
         fallbackReason:
-          directError instanceof Error ? directError.message : "direct province-plan parse failed",
+          directError instanceof Error ? directError.message : "direct local-plan parse failed",
         chunkingReady: true,
       },
       contentFingerprint: createFingerprint(exaResult.extractedText),
@@ -420,7 +436,8 @@ async function getProvinceDocumentContext(context: AiPipelineContext) {
           source: exaResult.sourceUrlOrPath,
           metadata: {
             provider: "exa_fallback",
-            province: context.municipality.province,
+            countryCode: context.country.code,
+            localPlanUnitName: context.localPlanUnitName,
           },
         },
       ],
@@ -434,11 +451,20 @@ async function runProvincePlanStage(
 ) {
   const chosen = chooseProvincePlanUrl(context);
   const inputFingerprint = buildStageFingerprint("province_plan_context", {
-    province: context.municipality.province,
+    countryCode: context.country.code,
+    localPlanUnitName: context.localPlanUnitName,
     selectedPlanUrl: chosen?.link ?? null,
     extractionVersion: "v2",
     displayVersion: "v2",
   });
+
+  if (!chosen) {
+    return toFailureStage(
+      "province_plan_context",
+      DOCUMENT_MODEL_NAME,
+      `No local/SNG plan URL is available for ${context.localPlanUnitName}.`,
+    );
+  }
 
   if (mode !== "regenerate") {
     const cached = await getCachedEntry("province_plan_context", context, DOCUMENT_MODEL_NAME, inputFingerprint);
@@ -449,12 +475,15 @@ async function runProvincePlanStage(
       };
     }
     if (mode === "load_cached") {
-      return toFailureStage("province_plan_context", DOCUMENT_MODEL_NAME, "No cached province plan context found.");
+      return toFailureStage("province_plan_context", DOCUMENT_MODEL_NAME, "No cached local/SNG plan context found.");
     }
   }
 
   const { document, sourceReferences } = await getProvinceDocumentContext(context);
-  const stageOutput = buildDocumentStageOutput(document, `${context.municipality.province} provincial plan`);
+  const stageOutput = buildDocumentStageOutput(
+    document,
+    `${context.localPlanUnitName} local/SNG plan`,
+  );
   const response = toCacheEntry({
     stage: "province_plan_context",
     cacheHit: false,
@@ -482,8 +511,12 @@ async function runNationalPlanStage(
   mode: AiStageRequestPayload["mode"],
 ) {
   const { getNationalPlanContext, loadNationalPlanSources } = await import("@/lib/ai/documents");
-  const selectedNationalSources = await loadNationalPlanSources(context.score.id);
+  const selectedNationalSources = await loadNationalPlanSources(
+    context.country.code,
+    context.score.id,
+  );
   const inputFingerprint = buildStageFingerprint("national_plan_context", {
+    countryCode: context.country.code,
     scoreId: context.score.id,
     selectedPlanUrls: selectedNationalSources.map((source) => source.link),
     extractionVersion: "v2",
@@ -503,10 +536,15 @@ async function runNationalPlanStage(
     }
   }
 
-  const { context: document, sources } = await getNationalPlanContext(context.score.id);
+  const { context: document, sources } = await getNationalPlanContext(
+    context.country.code,
+    context.score.id,
+  );
   const stageOutput = buildDocumentStageOutput(
     document,
-    sources.length === 1 ? "Nepal national plan" : "Nepal national planning documents",
+    sources.length === 1
+      ? `${context.country.name} national plan`
+      : `${context.country.name} national planning documents`,
   );
   const response = toCacheEntry({
     stage: "national_plan_context",
@@ -542,6 +580,7 @@ async function runNationalPlanStage(
 async function loadRequiredStage(stage: AiStageName, context: AiPipelineContext) {
   return loadLatestAiStageCacheByScope({
     stage,
+    countryCode: context.country.code,
     releaseKey: context.releaseKey,
     year: context.year,
     municipalityId: context.municipality.id,
@@ -622,7 +661,7 @@ async function runWebContextSearchStage(
       stage: "web_context_search",
       cacheHit: false,
       renderedOutput:
-        "No additional web context was injected. No reliable external search results were retrieved for the selected municipality and score.",
+        "No additional web context was injected. No reliable external search results were retrieved for the selected unit and score.",
       structuredOutput: {
         queryHits: [],
         skipped: true,
@@ -709,23 +748,29 @@ async function runAlignmentStage(
     !provinceStage.structuredOutput.sourceUrlOrPath ||
     !nationalStage.structuredOutput.sourceUrlOrPath
   ) {
-    return toFailureStage("plan_alignment", modelName, "Province and national plan contexts must be available before alignment can run.");
+    return toFailureStage(
+      "plan_alignment",
+      modelName,
+      "Local/SNG and national plan contexts must be available before alignment can run.",
+    );
   }
 
   const provinceDocument = documentFromStructuredOutput(
     provinceStage.structuredOutput,
     "province_plan",
+    context.country.code,
   );
   const nationalDocument = documentFromStructuredOutput(
     nationalStage.structuredOutput,
     "national_plan",
+    context.country.code,
   );
 
   if (!provinceDocument || !nationalDocument) {
     return toFailureStage(
       "plan_alignment",
       modelName,
-      "Province and national plan contexts were cached, but could not be reconstructed for alignment.",
+      "Local/SNG and national plan contexts were cached, but could not be reconstructed for alignment.",
     );
   }
 
@@ -736,6 +781,7 @@ async function runAlignmentStage(
     getWebContextSummaryFromStage(webContextStage),
   );
   const inputFingerprint = buildStageFingerprint("plan_alignment", {
+    countryCode: context.country.code,
     provinceFingerprint: provinceDocument.contentFingerprint,
     nationalFingerprint: nationalDocument.contentFingerprint,
     webContext: getWebContextSummaryFromStage(webContextStage),
@@ -770,8 +816,9 @@ async function runAlignmentStage(
     cacheHit: false,
     renderedOutput: generated.text,
     structuredOutput: {
+      countryCode: context.country.code,
       municipality: context.municipality,
-      province: context.municipality.province,
+      localPlanUnitName: context.localPlanUnitName,
     },
     sourceReferences: [
       {
@@ -820,24 +867,26 @@ async function runSwotStage(
     return toFailureStage(
       "swot_analysis",
       modelName,
-      "Province and national plan contexts must be generated before SWOT can run.",
+      "Local/SNG and national plan contexts must be generated before SWOT can run.",
     );
   }
 
   const provinceDocument = documentFromStructuredOutput(
     provinceStage.structuredOutput,
     "province_plan",
+    context.country.code,
   );
   const nationalDocument = documentFromStructuredOutput(
     nationalStage.structuredOutput,
     "national_plan",
+    context.country.code,
   );
 
   if (!provinceDocument || !nationalDocument) {
     return toFailureStage(
       "swot_analysis",
       modelName,
-      "Province and national plan contexts were cached, but could not be reconstructed for SWOT generation.",
+      "Local/SNG and national plan contexts were cached, but could not be reconstructed for SWOT generation.",
     );
   }
 
@@ -849,6 +898,7 @@ async function runSwotStage(
     webContextSummary: getWebContextSummaryFromStage(webContextStage),
   });
   const inputFingerprint = buildStageFingerprint("swot_analysis", {
+    countryCode: context.country.code,
     indicatorNarrative: indicatorStage.renderedOutput,
     provinceFingerprint: provinceDocument.contentFingerprint,
     nationalFingerprint: nationalDocument.contentFingerprint,
@@ -884,6 +934,7 @@ async function runSwotStage(
     cacheHit: false,
     renderedOutput: generated.text,
     structuredOutput: {
+      countryCode: context.country.code,
       municipality: context.municipality,
       score: context.score,
     },
@@ -947,6 +998,7 @@ async function runRecommendationsStage(
     webContextSummary: getWebContextSummaryFromStage(webContextStage),
   });
   const inputFingerprint = buildStageFingerprint("investment_recommendations", {
+    countryCode: context.country.code,
     indicatorNarrative: indicatorStage.renderedOutput,
     alignment: alignmentStage.renderedOutput,
     swot: swotStage.renderedOutput,
@@ -982,6 +1034,7 @@ async function runRecommendationsStage(
     cacheHit: false,
     renderedOutput: generated.text,
     structuredOutput: {
+      countryCode: context.country.code,
       municipality: context.municipality,
       score: context.score,
     },
@@ -1022,6 +1075,7 @@ export async function runAiStage(
   payload: AiStageRequestPayload,
 ): Promise<AiStageResponsePayload> {
   const context = await getAiPipelineContextForRequest({
+    countryCode: payload.countryCode,
     year: payload.year,
     municipalityId: payload.municipalityId,
     scoreId: payload.scoreId,

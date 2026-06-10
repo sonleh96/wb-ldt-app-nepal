@@ -21,6 +21,7 @@ export const countries = [
     },
     planningDocuments: {
       aiEnabled: true,
+      planSourceAdminLevel: "higher",
       message: "Planning documents are available for AI-assisted analysis.",
     },
   },
@@ -45,7 +46,8 @@ export const countries = [
       },
     },
     planningDocuments: {
-      aiEnabled: false,
+      aiEnabled: true,
+      planSourceAdminLevel: "lower",
       message: "Local planning documents will be added in a later release",
     },
   },
@@ -70,7 +72,8 @@ export const countries = [
       },
     },
     planningDocuments: {
-      aiEnabled: false,
+      aiEnabled: true,
+      planSourceAdminLevel: "lower",
       message: "Local planning documents will be added in a later release",
     },
   },

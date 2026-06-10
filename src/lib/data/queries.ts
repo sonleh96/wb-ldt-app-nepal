@@ -177,6 +177,46 @@ function resolveCountry(countryCode: CountryCode | string | undefined): Country 
   return getCountryByCode(countryCode ?? defaultCountry.code) ?? defaultCountry;
 }
 
+function getLocalPlanUnitName(country: Country, municipality: MunicipalityRecord) {
+  return country.planningDocuments.planSourceAdminLevel === "lower"
+    ? municipality.municipality
+    : municipality.province;
+}
+
+function getLocalPlanUnitLabel(country: Country) {
+  return country.planningDocuments.planSourceAdminLevel === "lower"
+    ? country.adminLabels.lower.singular
+    : country.adminLabels.higher.singular;
+}
+
+async function loadLocalPlanCandidatesForSelection(
+  country: Country,
+  municipality: MunicipalityRecord,
+) {
+  const localPlanUnitName = getLocalPlanUnitName(country, municipality);
+  const localPlanUnitLabel = getLocalPlanUnitLabel(country);
+
+  try {
+    const { getProvincePlanCandidatesForProvince } = await import("@/lib/ai/documents");
+    const candidates = await getProvincePlanCandidatesForProvince(
+      country.code,
+      localPlanUnitName,
+    );
+
+    return candidates.map((candidate) => ({
+      ...candidate,
+      planUnitName: localPlanUnitName,
+      planUnitLabel: localPlanUnitLabel,
+    }));
+  } catch (error) {
+    console.error(
+      `Unable to load ${country.code} local plan candidates for ${localPlanUnitName}:`,
+      error,
+    );
+    return [];
+  }
+}
+
 const loadLocalAnalyticsFallback = cache(async (countryCode: CountryCode): Promise<AnalyticsDataset> => {
   const country = resolveCountry(countryCode);
   const filePath = path.join(process.cwd(), country.fallbackDataPath);
@@ -994,6 +1034,18 @@ export async function getAnalyticsPageData(
       indicatorDefinitions.find((definition) => definition.id === series.indicatorId)
         ?.description ?? null,
   }));
+  const localPlanUnitName = getLocalPlanUnitName(country, selectedMunicipality);
+  const localPlanUnitLabel = getLocalPlanUnitLabel(country);
+  const localPlanCandidates =
+    shouldBuildAiSeries && country.planningDocuments.aiEnabled
+      ? await loadLocalPlanCandidatesForSelection(country, selectedMunicipality)
+      : [];
+  const localPlanUnavailableMessage =
+    shouldBuildAiSeries &&
+    country.planningDocuments.aiEnabled &&
+    localPlanCandidates.length === 0
+      ? `No local/SNG plan URL is available for ${localPlanUnitName}. Score narrative and national-plan context can still run, but alignment, SWOT, and recommendations need a local plan.`
+      : null;
   const nationalIndicatorAverages: Record<string, number | null> = {};
   if (selectedMapMetric.kind === "indicator") {
     nationalIndicatorAverages[selectedMapMetric.id] = average(
@@ -1100,7 +1152,11 @@ export async function getAnalyticsPageData(
       selectedScoreId: aiScoreDefinition.id,
       indicatorSeries: aiIndicatorSeriesWithDescriptions,
       cachedStages: {},
-      provincePlanCandidates: [],
+      provincePlanCandidates: localPlanCandidates,
+      localPlanUnitName,
+      localPlanUnitLabel,
+      localPlanAvailable: localPlanCandidates.length > 0,
+      localPlanUnavailableMessage,
     },
   } satisfies AnalyticsPageData;
 }
@@ -1176,11 +1232,13 @@ export async function getMethodologyData() {
 }
 
 export async function getAiPipelineContextForRequest({
+  countryCode,
   year,
   municipalityId,
   scoreId,
   includeProvincePlanCandidates = false,
 }: {
+  countryCode: CountryCode;
   year: number;
   municipalityId: string;
   scoreId: string;
@@ -1191,10 +1249,15 @@ export async function getAiPipelineContextForRequest({
     municipality: municipalityId,
     ai_score: scoreId,
     tab: "ai",
-  });
+  }, countryCode);
 
   const provincePlanCandidates = includeProvincePlanCandidates
-    ? await import("@/lib/ai/documents").then((module) => module.loadProvincePlanCandidates())
+    ? await import("@/lib/ai/documents").then((module) =>
+        module.getProvincePlanCandidatesForProvince(
+          pageData.country.code,
+          pageData.ai.localPlanUnitName,
+        ),
+      )
     : [];
 
   const selectedScore =
@@ -1202,6 +1265,7 @@ export async function getAiPipelineContextForRequest({
     pageData.ai.scoreOptions[0];
 
   return {
+    country: pageData.country,
     releaseKey: pageData.release.key,
     year: pageData.release.year,
     municipality: {
@@ -1216,8 +1280,13 @@ export async function getAiPipelineContextForRequest({
     },
     indicatorSeries: pageData.ai.indicatorSeries,
     waterfalls: pageData.waterfalls,
-    provincePlanCandidates: provincePlanCandidates.filter(
-      (candidate) => candidate.province === pageData.municipality.province,
-    ),
+    provincePlanCandidates: provincePlanCandidates.map((candidate) => ({
+      ...candidate,
+      planUnitName: pageData.ai.localPlanUnitName,
+      planUnitLabel: pageData.ai.localPlanUnitLabel,
+    })),
+    localPlanUnitName: pageData.ai.localPlanUnitName,
+    localPlanUnitLabel: pageData.ai.localPlanUnitLabel,
+    localPlanAvailable: pageData.ai.localPlanAvailable,
   };
 }

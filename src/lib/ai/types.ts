@@ -1,4 +1,5 @@
 import type { ScoreWaterfallGroup } from "@/types/analytics";
+import type { CountryCode, CountrySlug } from "@/lib/countries";
 
 export const aiStageNames = [
   "indicator_narrative",
@@ -30,6 +31,7 @@ export type AiDocumentChunk = {
 };
 
 export type AiDocumentContext = {
+  countryCode: CountryCode;
   sourceType: "province_plan" | "national_plan";
   title: string;
   province: string | null;
@@ -89,7 +91,10 @@ export type AiIndicatorSeries = {
 };
 
 export type ProvincePlanCandidate = {
+  countryCode: CountryCode;
   province: string;
+  planUnitName: string;
+  planUnitLabel: string;
   title: string;
   link: string;
   notes: string | null;
@@ -113,11 +118,16 @@ export type AiTabData = {
   indicatorSeries: AiIndicatorSeries[];
   cachedStages: Partial<Record<AiStageName, AiStageCacheEntry>>;
   provincePlanCandidates: ProvincePlanCandidate[];
+  localPlanUnitName: string;
+  localPlanUnitLabel: string;
+  localPlanAvailable: boolean;
+  localPlanUnavailableMessage: string | null;
 };
 
 export type AiStageMode = "generate" | "regenerate" | "load_cached";
 
 export type AiStageRequestPayload = {
+  countryCode: CountryCode;
   releaseKey: string;
   year: number;
   municipalityId: string;
@@ -139,6 +149,11 @@ export type AiStageResponsePayload = {
 };
 
 export type AiPipelineContext = {
+  country: {
+    code: CountryCode;
+    slug: CountrySlug;
+    name: string;
+  };
   releaseKey: string;
   year: number;
   municipality: {
@@ -154,4 +169,7 @@ export type AiPipelineContext = {
   indicatorSeries: AiIndicatorSeries[];
   waterfalls: ScoreWaterfallGroup[];
   provincePlanCandidates: ProvincePlanCandidate[];
+  localPlanUnitName: string;
+  localPlanUnitLabel: string;
+  localPlanAvailable: boolean;
 };
