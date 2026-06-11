@@ -1,10 +1,7 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { Metadata } from "next";
 
 import { StrategyInventoryDashboard } from "@/components/strategy-inventory/strategy-inventory-dashboard";
-import type { StrategyInventoryDataset } from "@/lib/strategy-inventory/types";
+import { loadStrategyInventoryDataset } from "@/lib/strategy-inventory/server";
 
 export const metadata: Metadata = {
   title: "Serbia Strategy Inventory | Local Development Tracker",
@@ -12,18 +9,15 @@ export const metadata: Metadata = {
     "Coverage, publication year, translation status, and AI-readiness of Serbian local strategy and budget documents.",
 };
 
-async function loadStrategyInventoryDataset() {
-  const datasetPath = path.join(
-    process.cwd(),
-    "public/data/serbia/strategy_inventory.sample.json",
-  );
-  const rawDataset = await readFile(datasetPath, "utf8");
-
-  return JSON.parse(rawDataset) as StrategyInventoryDataset;
-}
+export const dynamic = "force-dynamic";
 
 export default async function SerbiaStrategyInventoryPage() {
-  const dataset = await loadStrategyInventoryDataset();
+  const dataset = await loadStrategyInventoryDataset({
+    countryCode: "SRB",
+    countryName: "Serbia",
+    expectedLsgCount: 148,
+    samplePath: "public/data/serbia/strategy_inventory.sample.json",
+  });
 
   return (
     <StrategyInventoryDashboard
