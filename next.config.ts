@@ -9,6 +9,12 @@ const analyticsFallbackFiles = [
   "./public/data/serbia/municipalities.geojson",
 ];
 
+const aiDocumentFiles = [
+  "./node_modules/@napi-rs/**/*",
+  "./node_modules/pdf-parse/**/*",
+  "./node_modules/pdfjs-dist/**/*",
+];
+
 const nextConfig: NextConfig = {
   webpack(config) {
     config.module.rules.push({
@@ -31,15 +37,18 @@ const nextConfig: NextConfig = {
     "/zambia": analyticsFallbackFiles,
     "/serbia": analyticsFallbackFiles,
     "/[country]/analytics": analyticsFallbackFiles,
+    "/api/ai/indicator-narrative": analyticsFallbackFiles,
+    "/api/ai/investment-recommendations": analyticsFallbackFiles,
+    "/api/ai/plan-alignment": analyticsFallbackFiles,
+    "/api/ai/swot-analysis": analyticsFallbackFiles,
+    "/api/ai/web-context-search": analyticsFallbackFiles,
     "/api/ai/province-plan-context": [
-      "./node_modules/@napi-rs/**/*",
-      "./node_modules/pdf-parse/**/*",
-      "./node_modules/pdfjs-dist/**/*",
+      ...analyticsFallbackFiles,
+      ...aiDocumentFiles,
     ],
     "/api/ai/national-plan-context": [
-      "./node_modules/@napi-rs/**/*",
-      "./node_modules/pdf-parse/**/*",
-      "./node_modules/pdfjs-dist/**/*",
+      ...analyticsFallbackFiles,
+      ...aiDocumentFiles,
     ],
   },
 };

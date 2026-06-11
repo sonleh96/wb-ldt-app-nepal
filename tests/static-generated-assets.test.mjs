@@ -33,3 +33,10 @@ test("Next config parses statically imported GeoJSON assets as JSON", async () =
   assert.match(source, /test:\s*\/\\\.geojson\$\/,/);
   assert.match(source, /type:\s*["']json["']/);
 });
+
+test("AI route tracing includes generated analytics fallbacks", async () => {
+  const source = await readFile("next.config.ts", "utf8");
+
+  assert.match(source, /"\/api\/ai\/national-plan-context"/);
+  assert.match(source, /\.\.\.analyticsFallbackFiles/);
+});
