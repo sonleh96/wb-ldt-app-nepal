@@ -1,6 +1,3 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import Link from "next/link";
 
 import {
@@ -8,7 +5,7 @@ import {
   type CountryHomeGroup,
 } from "@/lib/country-home";
 import type { Country } from "@/lib/countries";
-import type { AnalyticsDataset } from "@/types/analytics";
+import { getStaticAnalyticsDataset } from "@/lib/data/static-assets";
 
 const PREVIEW_UNIT_COUNT = 6;
 
@@ -18,12 +15,6 @@ function lowerFirst(value: string) {
 
 function unitListKey(groupName: string, unitName: string, index: number) {
   return `${groupName.toLowerCase()}-${unitName.toLowerCase()}-${index}`;
-}
-
-async function loadCountryDataset(country: Country) {
-  const datasetPath = path.join(process.cwd(), country.fallbackDataPath);
-  const raw = await readFile(datasetPath, "utf8");
-  return JSON.parse(raw) as AnalyticsDataset;
 }
 
 function AdminGroupCard({
@@ -92,7 +83,7 @@ function AdminGroupCard({
 }
 
 export async function CountryLandingPage({ country }: { country: Country }) {
-  const dataset = await loadCountryDataset(country);
+  const dataset = getStaticAnalyticsDataset(country.code);
   const model = buildCountryHomeModel(country, dataset);
   const lowerSingular = country.adminLabels.lower.singular;
   const lowerPlural = country.adminLabels.lower.plural;
