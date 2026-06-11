@@ -8,7 +8,10 @@ import {
   saveDocumentContext,
 } from "@/lib/ai/cache";
 import { fetchPlanDocument } from "@/lib/ai/plan-document-fetch";
-import { installPdfWorkerGlobalForNode } from "@/lib/ai/pdf-worker";
+import {
+  installPdfJsNodePolyfills,
+  installPdfWorkerGlobalForNode,
+} from "@/lib/ai/pdf-worker";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   AiDocumentContext,
@@ -21,6 +24,7 @@ const DOCUMENT_EXTRACTION_VERSION = "v2";
 let pdfParseModulePromise: Promise<typeof import("pdf-parse")> | null = null;
 
 async function loadPdfParseModule() {
+  installPdfJsNodePolyfills();
   pdfParseModulePromise ??= import("pdf-parse");
   return pdfParseModulePromise;
 }
