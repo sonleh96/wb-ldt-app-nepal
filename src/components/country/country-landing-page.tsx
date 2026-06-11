@@ -12,6 +12,7 @@ import {
   type CountryHomeGroup,
 } from "@/lib/country-home";
 import { getCountryLandingActions } from "@/lib/country-landing-actions";
+import { getPlanAvailabilityDisclosure } from "@/lib/country-plan-availability";
 import type { Country } from "@/lib/countries";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { AnalyticsDataset } from "@/types/analytics";
@@ -298,6 +299,7 @@ export async function CountryLandingPage({ country }: { country: Country }) {
   const actions = getCountryLandingActions(country);
   const leftActions = actions.filter((action) => action.align === "left");
   const rightActions = actions.filter((action) => action.align === "right");
+  const planAvailabilityDisclosure = getPlanAvailabilityDisclosure(country);
 
   function actionClassName(variant: "primary" | "secondary") {
     const baseClassName =
@@ -411,48 +413,57 @@ export async function CountryLandingPage({ country }: { country: Country }) {
             }}
           />
 
-          <div className="mt-8">
-            <h3 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
-              Development plan source availability
-            </h3>
-            <p className="mt-2 max-w-4xl text-sm leading-7 text-[var(--muted-foreground)]">
-              {country.planningDocuments.message} This section tracks which{" "}
-              {country.planningDocuments.planSourceAdminLevel === "lower"
-                ? lowerPluralLabel
-                : higherPluralLabel}{" "}
-              currently have local/SNG plan links available for AI-assisted analysis.
-            </p>
-          </div>
+          <details
+            className="group mt-8 rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5"
+            open={planAvailabilityDisclosure.defaultOpen}
+          >
+            <summary className="flex cursor-pointer list-none flex-col gap-3 marker:hidden sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+                  Development plan source availability
+                </h3>
+                <p className="mt-2 max-w-4xl text-sm leading-7 text-[var(--muted-foreground)]">
+                  {planAvailabilityDisclosure.description}
+                </p>
+              </div>
+              <span className="inline-flex w-fit shrink-0 rounded-full border border-[var(--border-soft)] bg-[var(--surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                <span className="group-open:hidden">Expand</span>
+                <span className="hidden group-open:inline">Collapse</span>
+              </span>
+            </summary>
 
-          <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
-            <div className="flex items-center gap-3 text-[var(--foreground)]">
-              <StatusBadge
-                available={true}
-                label="Development plan source available"
-              />
-              <span>Plan source available</span>
-            </div>
-            <div className="flex items-center gap-3 text-[var(--foreground)]">
-              <StatusBadge
-                available={false}
-                label="Development plan source not available"
-              />
-              <span>Plan source not available</span>
-            </div>
-          </div>
+            <div className="mt-5 border-t border-[var(--border-soft)] pt-5">
+              <div className="flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
+                <div className="flex items-center gap-3 text-[var(--foreground)]">
+                  <StatusBadge
+                    available={true}
+                    label="Development plan source available"
+                  />
+                  <span>Plan source available</span>
+                </div>
+                <div className="flex items-center gap-3 text-[var(--foreground)]">
+                  <StatusBadge
+                    available={false}
+                    label="Development plan source not available"
+                  />
+                  <span>Plan source not available</span>
+                </div>
+              </div>
 
-          <div className="mt-6 space-y-5">
-            {model.groups.map((group) => (
-              <AdminGroupCard
-                key={group.name}
-                group={group}
-                lowerPlural={lowerPlural}
-                lowerSingular={lowerSingular}
-                planSourcesByUnit={planSourcesByUnit}
-                planSourceAdminLevel={country.planningDocuments.planSourceAdminLevel}
-              />
-            ))}
-          </div>
+              <div className="mt-6 space-y-5">
+                {model.groups.map((group) => (
+                  <AdminGroupCard
+                    key={group.name}
+                    group={group}
+                    lowerPlural={lowerPlural}
+                    lowerSingular={lowerSingular}
+                    planSourcesByUnit={planSourcesByUnit}
+                    planSourceAdminLevel={country.planningDocuments.planSourceAdminLevel}
+                  />
+                ))}
+              </div>
+            </div>
+          </details>
         </article>
       </section>
     </main>
