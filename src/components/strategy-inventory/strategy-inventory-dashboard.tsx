@@ -7,8 +7,8 @@ import { PlotlyChart } from "@/components/analytics/plotly-chart";
 import { useTheme } from "@/components/theme/theme-provider";
 import { filterStrategyInventoryRecords } from "@/lib/strategy-inventory/filters";
 import {
+  getStrategyInventoryDisplaySummary,
   getReadinessCategory,
-  getStrategyInventorySummary,
   READINESS_CATEGORIES,
 } from "@/lib/strategy-inventory/summarize";
 import type {
@@ -672,12 +672,15 @@ export function StrategyInventoryDashboard({
   dataset: StrategyInventoryDataset;
 }) {
   const summary = useMemo(
-    () => getStrategyInventorySummary(dataset.records, dataset.expected_lsg_count),
-    [dataset.expected_lsg_count, dataset.records],
+    () => getStrategyInventoryDisplaySummary(
+      dataset.records,
+      dataset.expected_lsg_count,
+      dataset.summary_override,
+    ),
+    [dataset.expected_lsg_count, dataset.records, dataset.summary_override],
   );
   const needsTranslationOrValidation =
-    (summary.status_breakdown.find((entry) => entry.category === "Needs Translation")?.count ?? 0) +
-    (summary.status_breakdown.find((entry) => entry.category === "Needs Validation")?.count ?? 0);
+    summary.needs_translation + summary.needs_validation;
 
   return (
     <main className="flex flex-1 flex-col">

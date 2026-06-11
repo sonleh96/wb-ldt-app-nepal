@@ -4,6 +4,7 @@ import type {
   ReadinessStatusCount,
   StrategyInventoryRecord,
   StrategyInventorySummary,
+  StrategyInventorySummaryOverride,
 } from "./types.ts";
 
 export const READINESS_CATEGORIES: ReadonlyArray<ReadinessCategory> = [
@@ -158,5 +159,22 @@ export function getStrategyInventorySummary(
     unknown_year_count: publicationYearCounts.get("Unknown") ?? 0,
     status_breakdown,
     latest_last_updated: latestLastUpdated(records),
+  };
+}
+
+export function getStrategyInventoryDisplaySummary(
+  records: StrategyInventoryRecord[],
+  expectedLsgs: number | ExpectedLsg[],
+  summaryOverride?: StrategyInventorySummaryOverride,
+): StrategyInventorySummary {
+  const summary = getStrategyInventorySummary(records, expectedLsgs);
+
+  if (!summaryOverride) {
+    return summary;
+  }
+
+  return {
+    ...summary,
+    ...summaryOverride,
   };
 }

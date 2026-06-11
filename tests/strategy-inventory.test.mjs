@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getStrategyInventoryDisplaySummary,
   getReadinessCategory,
   getStrategyInventorySummary,
 } from "../src/lib/strategy-inventory/summarize.ts";
@@ -131,6 +132,40 @@ test("strategy inventory summary supports an expected-count-only universe", () =
   assert.equal(summary.lsgs_with_any_document, 3);
   assert.equal(summary.missing_lsgs.length, 1);
   assert.equal(summary.unlisted_missing_lsg_count, 144);
+});
+
+test("strategy inventory display summary supports temporary placeholder overrides", () => {
+  const summary = getStrategyInventoryDisplaySummary(records, 148, {
+    expected_lsgs: 161,
+    lsgs_with_any_document: 152,
+    coverage_rate: 152 / 161,
+    total_documents_found: 152,
+    ai_ready_documents: 152,
+    needs_translation: 0,
+    needs_validation: 0,
+    status_breakdown: [
+      { category: "AI-ready", count: 152 },
+      { category: "Found / Not Parsed", count: 0 },
+      { category: "Needs Translation", count: 0 },
+      { category: "Needs Validation", count: 0 },
+      { category: "Missing", count: 9 },
+    ],
+  });
+
+  assert.equal(summary.expected_lsgs, 161);
+  assert.equal(summary.lsgs_with_any_document, 152);
+  assert.equal(summary.coverage_rate, 152 / 161);
+  assert.equal(summary.total_documents_found, 152);
+  assert.equal(summary.ai_ready_documents, 152);
+  assert.equal(summary.needs_translation, 0);
+  assert.equal(summary.needs_validation, 0);
+  assert.deepEqual(summary.status_breakdown, [
+    { category: "AI-ready", count: 152 },
+    { category: "Found / Not Parsed", count: 0 },
+    { category: "Needs Translation", count: 0 },
+    { category: "Needs Validation", count: 0 },
+    { category: "Missing", count: 9 },
+  ]);
 });
 
 test("strategy inventory filters combine search, year, readiness, type, and translation status", () => {
