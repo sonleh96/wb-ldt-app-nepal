@@ -23,7 +23,15 @@ function hasDocumentSource(record: StrategyInventoryRecord) {
   return record.source_status === "found" || record.source_status === "needs_validation";
 }
 
+function isSerbianLanguageException(record: StrategyInventoryRecord) {
+  return record.country_code === "SRB" && record.language === "sr";
+}
+
 function needsTranslation(record: StrategyInventoryRecord) {
+  if (isSerbianLanguageException(record)) {
+    return false;
+  }
+
   return (
     record.translation_status === "needs_translation" ||
     record.translation_status === "partial"
@@ -35,6 +43,14 @@ function needsValidation(record: StrategyInventoryRecord) {
     record.source_status === "needs_validation" ||
     record.parsing_status === "failed" ||
     record.parsing_status === "needs_review"
+  );
+}
+
+function isAiReadyRecord(record: StrategyInventoryRecord) {
+  return (
+    record.source_status === "found" &&
+    record.parsing_status === "parsed" &&
+    (record.ai_ready || isSerbianLanguageException(record))
   );
 }
 
@@ -84,16 +100,16 @@ export function getReadinessCategory(record: StrategyInventoryRecord): Readiness
     return "Missing";
   }
 
-  if (needsTranslation(record)) {
-    return "Needs Translation";
-  }
-
   if (needsValidation(record)) {
     return "Needs Validation";
   }
 
-  if (record.parsing_status === "parsed" && record.ai_ready) {
+  if (isAiReadyRecord(record)) {
     return "AI-ready";
+  }
+
+  if (needsTranslation(record)) {
+    return "Needs Translation";
   }
 
   return "Found / Not Parsed";
@@ -150,7 +166,7 @@ export function getStrategyInventorySummary(
     total_documents_found: documentRecords.length,
     strategies_found: documentRecords.filter((record) => record.document_type === "strategy").length,
     budgets_found: documentRecords.filter((record) => record.document_type === "budget").length,
-    ai_ready_documents: records.filter((record) => record.ai_ready).length,
+    ai_ready_documents: records.filter(isAiReadyRecord).length,
     needs_translation: records.filter(needsTranslation).length,
     needs_validation: records.filter(needsValidation).length,
     missing_lsgs,

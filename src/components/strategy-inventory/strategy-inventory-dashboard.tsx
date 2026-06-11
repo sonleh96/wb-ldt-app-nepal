@@ -679,8 +679,10 @@ export function StrategyInventoryDashboard({
     ),
     [dataset.expected_lsg_count, dataset.records, dataset.summary_override],
   );
+  const countReadinessCategory = (category: ReadinessCategory) =>
+    summary.status_breakdown.find((entry) => entry.category === category)?.count ?? 0;
   const needsTranslationOrValidation =
-    summary.needs_translation + summary.needs_validation;
+    countReadinessCategory("Needs Translation") + countReadinessCategory("Needs Validation");
 
   return (
     <main className="flex flex-1 flex-col">
