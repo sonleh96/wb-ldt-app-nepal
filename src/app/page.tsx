@@ -5,8 +5,24 @@ import euLogo from "../../images/eu_logo.webp";
 import swissLogo from "../../images/swiss_logo.webp";
 import wbLogo from "../../images/wb_logo.webp";
 import { CountrySelector } from "@/components/home/country-selector";
-import analyticsData from "@/generated/analytics-data.json";
+import nplAnalyticsData from "@/generated/analytics-data.json";
+import serbiaAnalyticsData from "@/generated/serbia/analytics-data.json";
+import zambiaAnalyticsData from "@/generated/zambia/analytics-data.json";
 import { countries } from "@/lib/countries";
+
+const analyticsDatasets = [
+  nplAnalyticsData,
+  serbiaAnalyticsData,
+  zambiaAnalyticsData,
+] as const;
+
+const totalLoadedLsgs = analyticsDatasets.reduce(
+  (sum, dataset) => sum + dataset.coverage.analyticsMunicipalityCount,
+  0,
+);
+const latestDataYear = Math.max(
+  ...analyticsDatasets.map((dataset) => dataset.release.year),
+);
 
 const capabilityCards = [
   {
@@ -33,12 +49,12 @@ const homeStats = [
     label: "Country workspaces",
   },
   {
-    value: analyticsData.coverage.analyticsMunicipalityCount.toLocaleString("en-US"),
-    label: "Nepal LSGs currently loaded",
+    value: totalLoadedLsgs.toLocaleString("en-US"),
+    label: "LSGs currently loaded",
   },
   {
-    value: String(analyticsData.release.year),
-    label: "Nepal release",
+    value: String(latestDataYear),
+    label: "Latest data year",
   },
 ] as const;
 

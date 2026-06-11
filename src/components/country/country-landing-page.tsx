@@ -11,6 +11,8 @@ import {
   buildCountryHomeModel,
   type CountryHomeGroup,
 } from "@/lib/country-home";
+import { getCountryLandingActions } from "@/lib/country-landing-actions";
+import { getPlanAvailabilityDisclosure } from "@/lib/country-plan-availability";
 import type { Country } from "@/lib/countries";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { AnalyticsDataset } from "@/types/analytics";
@@ -294,6 +296,19 @@ export async function CountryLandingPage({ country }: { country: Country }) {
   const lowerSingularLabel = lowerFirst(lowerSingular);
   const lowerPluralLabel = lowerFirst(lowerPlural);
   const higherPluralLabel = lowerFirst(higherPlural);
+  const actions = getCountryLandingActions(country);
+  const leftActions = actions.filter((action) => action.align === "left");
+  const rightActions = actions.filter((action) => action.align === "right");
+  const planAvailabilityDisclosure = getPlanAvailabilityDisclosure(country);
+
+  function actionClassName(variant: "primary" | "secondary") {
+    const baseClassName =
+      "inline-flex min-h-[58px] items-center justify-center rounded-full px-8 py-4 text-base font-medium transition-colors sm:min-w-[12rem]";
+
+    return variant === "primary"
+      ? `${baseClassName} bg-[var(--accent)] text-white shadow-[0_12px_28px_rgba(17,138,178,0.24)] transition-transform hover:-translate-y-0.5 hover:brightness-95`
+      : `${baseClassName} border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]`;
+  }
 
   return (
     <main className="flex flex-1 flex-col">
@@ -307,22 +322,29 @@ export async function CountryLandingPage({ country }: { country: Country }) {
             population and PIL indicators, and trace which planning documents are
             available for analysis.
           </p>
-          <div className="mt-12 flex flex-col gap-4 sm:flex-row">
-            <Link
-              href={`/${country.slug}/analytics`}
-              className="inline-flex min-h-[58px] items-center justify-center rounded-full bg-[var(--accent)] px-8 py-4 text-base font-medium text-white shadow-[0_12px_28px_rgba(17,138,178,0.24)] transition-transform hover:-translate-y-0.5 hover:brightness-95 sm:min-w-[12rem]"
-            >
-              <span className="flex flex-col items-center leading-tight">
-                <span>Analyze {lowerSingularLabel}</span>
-                <span>metrics</span>
-              </span>
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex min-h-[58px] items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-8 py-4 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-strong)] sm:min-w-[12rem]"
-            >
-              Compare countries
-            </Link>
+          <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              {leftActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className={actionClassName(action.variant)}
+                >
+                  {action.label}
+                </Link>
+              ))}
+            </div>
+            <div className="flex flex-col gap-4 sm:ml-auto sm:flex-row">
+              {rightActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className={actionClassName(action.variant)}
+                >
+                  {action.label}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -391,48 +413,57 @@ export async function CountryLandingPage({ country }: { country: Country }) {
             }}
           />
 
-          <div className="mt-8">
-            <h3 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
-              Development plan source availability
-            </h3>
-            <p className="mt-2 max-w-4xl text-sm leading-7 text-[var(--muted-foreground)]">
-              {country.planningDocuments.message} This section tracks which{" "}
-              {country.planningDocuments.planSourceAdminLevel === "lower"
-                ? lowerPluralLabel
-                : higherPluralLabel}{" "}
-              currently have local/SNG plan links available for AI-assisted analysis.
-            </p>
-          </div>
+          <details
+            className="group mt-8 rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5"
+            open={planAvailabilityDisclosure.defaultOpen}
+          >
+            <summary className="flex cursor-pointer list-none flex-col gap-3 marker:hidden sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+                  Development plan source availability
+                </h3>
+                <p className="mt-2 max-w-4xl text-sm leading-7 text-[var(--muted-foreground)]">
+                  {planAvailabilityDisclosure.description}
+                </p>
+              </div>
+              <span className="inline-flex w-fit shrink-0 rounded-full border border-[var(--border-soft)] bg-[var(--surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                <span className="group-open:hidden">Expand</span>
+                <span className="hidden group-open:inline">Collapse</span>
+              </span>
+            </summary>
 
-          <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
-            <div className="flex items-center gap-3 text-[var(--foreground)]">
-              <StatusBadge
-                available={true}
-                label="Development plan source available"
-              />
-              <span>Plan source available</span>
-            </div>
-            <div className="flex items-center gap-3 text-[var(--foreground)]">
-              <StatusBadge
-                available={false}
-                label="Development plan source not available"
-              />
-              <span>Plan source not available</span>
-            </div>
-          </div>
+            <div className="mt-5 border-t border-[var(--border-soft)] pt-5">
+              <div className="flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
+                <div className="flex items-center gap-3 text-[var(--foreground)]">
+                  <StatusBadge
+                    available={true}
+                    label="Development plan source available"
+                  />
+                  <span>Plan source available</span>
+                </div>
+                <div className="flex items-center gap-3 text-[var(--foreground)]">
+                  <StatusBadge
+                    available={false}
+                    label="Development plan source not available"
+                  />
+                  <span>Plan source not available</span>
+                </div>
+              </div>
 
-          <div className="mt-6 space-y-5">
-            {model.groups.map((group) => (
-              <AdminGroupCard
-                key={group.name}
-                group={group}
-                lowerPlural={lowerPlural}
-                lowerSingular={lowerSingular}
-                planSourcesByUnit={planSourcesByUnit}
-                planSourceAdminLevel={country.planningDocuments.planSourceAdminLevel}
-              />
-            ))}
-          </div>
+              <div className="mt-6 space-y-5">
+                {model.groups.map((group) => (
+                  <AdminGroupCard
+                    key={group.name}
+                    group={group}
+                    lowerPlural={lowerPlural}
+                    lowerSingular={lowerSingular}
+                    planSourcesByUnit={planSourcesByUnit}
+                    planSourceAdminLevel={country.planningDocuments.planSourceAdminLevel}
+                  />
+                ))}
+              </div>
+            </div>
+          </details>
         </article>
       </section>
     </main>

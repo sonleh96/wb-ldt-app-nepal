@@ -15,6 +15,14 @@ const aiDocumentFiles = [
   "./node_modules/pdfjs-dist/**/*",
 ];
 
+const serbiaStrategyInventoryFallbackFiles = [
+  "./public/data/serbia/strategy_inventory.sample.json",
+];
+
+const zambiaStrategyInventoryFallbackFiles = [
+  "./public/data/zambia/strategy_inventory.sample.json",
+];
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -42,6 +50,8 @@ const nextConfig: NextConfig = {
       ...analyticsFallbackFiles,
       ...aiDocumentFiles,
     ],
+    "/serbia/strategy-inventory": serbiaStrategyInventoryFallbackFiles,
+    "/zambia/strategy-inventory": zambiaStrategyInventoryFallbackFiles,
   },
 };
 
