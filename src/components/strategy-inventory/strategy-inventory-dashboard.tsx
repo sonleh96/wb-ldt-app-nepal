@@ -687,25 +687,25 @@ export function StrategyInventoryDashboard({
       <section className="border-b border-[var(--border-soft)] bg-[radial-gradient(circle_at_top,var(--hero-glow),transparent_38%),linear-gradient(180deg,var(--hero-wash-start),var(--hero-wash-end))]">
         <div className="mx-auto flex w-full max-w-7xl flex-col px-6 py-16 sm:px-8 lg:px-12 lg:py-20">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
-            Serbia workspace
+            {dataset.country_name} workspace
           </p>
           <h1 className="mt-5 max-w-5xl text-4xl font-semibold tracking-tight text-[var(--foreground)] sm:text-5xl">
             Local Strategy Inventory Dashboard
           </h1>
           <p className="mt-6 max-w-4xl text-base leading-8 text-[var(--muted-foreground)] sm:text-lg">
             Coverage, publication year, translation status, and AI-readiness of
-            local strategy and budget documents across Serbian LSGs.
+            local strategy and budget documents across {dataset.country_name} LSGs.
           </p>
           <p className="mt-5 max-w-5xl text-sm leading-7 text-[var(--muted-foreground)]">
             The Strategy Inventory Dashboard summarizes the availability and readiness
-            of local strategy and budget documents across Serbian LSGs. It helps users
+            of local strategy and budget documents across {dataset.country_name} LSGs. It helps users
             assess whether the planning evidence base is sufficiently complete, current,
             translated, and AI-ready to support alignment analysis, SWOT synthesis, and
             investment recommendations.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm text-[var(--muted-foreground)]">
             <span className="rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2">
-              Serbia LSG universe: {formatNumber(summary.expected_lsgs)}
+              {dataset.country_name} LSG universe: {formatNumber(summary.expected_lsgs)}
             </span>
             <span className="rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2">
               Last updated: {formatDate(summary.latest_last_updated ?? dataset.last_updated)}
@@ -724,7 +724,7 @@ export function StrategyInventoryDashboard({
           <aside className="rounded-[1.5rem] border border-[#c7923e]/45 bg-[#c7923e]/12 p-5 text-sm leading-7 text-[var(--foreground)]">
             This dashboard is currently wired to a clearly marked sample dataset with{" "}
             {formatNumber(dataset.records.length)} records. It is ready for the full
-            Serbian LSG inventory once validated source metadata is added.
+            {dataset.country_name} LSG inventory once validated source metadata is added.
           </aside>
         ) : null}
 
@@ -732,7 +732,7 @@ export function StrategyInventoryDashboard({
           <KpiCard
             label="LSGs Expected"
             value={formatNumber(summary.expected_lsgs)}
-            helper="Expected Serbian LSG universe."
+            helper={`Expected ${dataset.country_name} LSG universe.`}
           />
           <KpiCard
             label="LSGs with Documents"

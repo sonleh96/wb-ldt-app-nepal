@@ -22,10 +22,10 @@ export function getCountryLandingActions(country: Country): CountryLandingAction
     },
   ];
 
-  if (country.slug === "serbia") {
+  if (country.slug === "serbia" || country.slug === "zambia") {
     actions.push({
       label: "Strategy inventory",
-      href: "/serbia/strategy-inventory",
+      href: `/${country.slug}/strategy-inventory`,
       variant: "secondary",
       align: "left",
     });

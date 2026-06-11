@@ -20,7 +20,7 @@ test("Serbia country landing actions put strategy inventory next to analytics", 
   );
 });
 
-test("Countries without strategy inventory keep only analytics and homepage actions", () => {
+test("Zambia country landing actions put strategy inventory next to analytics", () => {
   const country = getCountryBySlug("zambia");
   assert.ok(country);
 
@@ -30,6 +30,7 @@ test("Countries without strategy inventory keep only analytics and homepage acti
     actions.map((action) => [action.label, action.href, action.align]),
     [
       ["Analyze district metrics", "/zambia/analytics", "left"],
+      ["Strategy inventory", "/zambia/strategy-inventory", "left"],
       ["Return to Homepage", "/", "right"],
     ],
   );
