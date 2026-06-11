@@ -323,6 +323,14 @@ export async function CountryLandingPage({ country }: { country: Country }) {
             >
               Compare countries
             </Link>
+            {country.slug === "serbia" ? (
+              <Link
+                href="/serbia/strategy-inventory"
+                className="inline-flex min-h-[58px] items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-8 py-4 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-strong)] sm:min-w-[12rem]"
+              >
+                Strategy inventory
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>
