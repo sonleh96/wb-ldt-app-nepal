@@ -48,7 +48,8 @@ export const countries = [
     planningDocuments: {
       aiEnabled: true,
       planSourceAdminLevel: "lower",
-      message: "Local planning documents will be added in a later release",
+      message:
+        "Local/SNG planning documents are available for AI-assisted analysis where source links are loaded.",
     },
   },
   {
@@ -74,7 +75,8 @@ export const countries = [
     planningDocuments: {
       aiEnabled: true,
       planSourceAdminLevel: "lower",
-      message: "Local planning documents will be added in a later release",
+      message:
+        "Local/SNG planning documents are available for AI-assisted analysis where source links are loaded.",
     },
   },
 ] as const;

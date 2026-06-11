@@ -34,71 +34,91 @@ type TableColumn = {
   render: (row: SngDisplayRow) => string | number | null;
 };
 
+type SngDisplayLabels = {
+  lowerSingular: string;
+  lowerPlural: string;
+  higherSingular: string;
+  higherPlural: string;
+  csvFileName: string;
+};
+
 type ExportColumn = {
   label: string;
   render: (row: SngDisplayRow) => string | number | boolean | null;
 };
 
-const tableColumns: TableColumn[] = [
-  { key: "municipality", label: "Municipality", render: (row) => row.municipality },
-  { key: "province", label: "Province", render: (row) => row.province },
-  { key: "population", label: "Population", align: "right", render: (row) => row.population },
-  {
-    key: "totalLandAreaKm2",
-    label: "Area (km2)",
-    align: "right",
-    render: (row) => row.totalLandAreaKm2,
-  },
-  {
-    key: "infrastructureScore",
-    label: "Infrastructure",
-    align: "right",
-    render: (row) => row.infrastructureScore,
-  },
-  {
-    key: "livabilityScore",
-    label: "Livability",
-    align: "right",
-    render: (row) => row.livabilityScore,
-  },
-  {
-    key: "prosperityScore",
-    label: "Prosperity",
-    align: "right",
-    render: (row) => row.prosperityScore,
-  },
-  {
-    key: "pilAggregate",
-    label: "PIL aggregate",
-    align: "right",
-    render: (row) => row.pilAggregate,
-  },
-  {
-    key: "hasDevelopmentStrategy",
-    label: "Strategy",
-    align: "center",
-    render: (row) => (row.hasDevelopmentStrategy ? "Yes" : "No"),
-  },
-  {
-    key: "strategyLevel",
-    label: "Strategy level",
-    render: (row) => row.strategyLevel,
-  },
-];
+const defaultLabels: SngDisplayLabels = {
+  lowerSingular: "Municipality",
+  lowerPlural: "Municipalities",
+  higherSingular: "Province",
+  higherPlural: "Provinces",
+  csvFileName: "nepal-sng-municipality-metrics.csv",
+};
 
-const exportColumns: ExportColumn[] = [
-  { label: "Municipality", render: (row) => row.municipality },
-  { label: "Province", render: (row) => row.province },
-  { label: "Population", render: (row) => row.population },
-  { label: "Area (km2)", render: (row) => row.totalLandAreaKm2 },
-  { label: "Infrastructure Score", render: (row) => row.infrastructureScore },
-  { label: "Livability Score", render: (row) => row.livabilityScore },
-  { label: "Prosperity Score", render: (row) => row.prosperityScore },
-  { label: "PIL Aggregate", render: (row) => row.pilAggregate },
-  { label: "Has Development Strategy", render: (row) => row.hasDevelopmentStrategy ? "Yes" : "No" },
-  { label: "Strategy Level", render: (row) => row.strategyLevel },
-  { label: "Link", render: (row) => row.link },
-];
+function buildTableColumns(labels: SngDisplayLabels): TableColumn[] {
+  return [
+    { key: "municipality", label: labels.lowerSingular, render: (row) => row.municipality },
+    { key: "province", label: labels.higherSingular, render: (row) => row.province },
+    { key: "population", label: "Population", align: "right", render: (row) => row.population },
+    {
+      key: "totalLandAreaKm2",
+      label: "Area (km2)",
+      align: "right",
+      render: (row) => row.totalLandAreaKm2,
+    },
+    {
+      key: "infrastructureScore",
+      label: "Infrastructure",
+      align: "right",
+      render: (row) => row.infrastructureScore,
+    },
+    {
+      key: "livabilityScore",
+      label: "Livability",
+      align: "right",
+      render: (row) => row.livabilityScore,
+    },
+    {
+      key: "prosperityScore",
+      label: "Prosperity",
+      align: "right",
+      render: (row) => row.prosperityScore,
+    },
+    {
+      key: "pilAggregate",
+      label: "PIL aggregate",
+      align: "right",
+      render: (row) => row.pilAggregate,
+    },
+    {
+      key: "hasDevelopmentStrategy",
+      label: "Strategy",
+      align: "center",
+      render: (row) => (row.hasDevelopmentStrategy ? "Yes" : "No"),
+    },
+    {
+      key: "strategyLevel",
+      label: "Strategy level",
+      render: (row) => row.strategyLevel,
+    },
+  ];
+}
+
+function buildExportColumns(labels: SngDisplayLabels): ExportColumn[] {
+  return [
+    { label: labels.lowerSingular, render: (row) => row.municipality },
+    { label: labels.higherSingular, render: (row) => row.province },
+    { label: "Population", render: (row) => row.population },
+    { label: "Area (km2)", render: (row) => row.totalLandAreaKm2 },
+    { label: "Infrastructure Score", render: (row) => row.infrastructureScore },
+    { label: "Livability Score", render: (row) => row.livabilityScore },
+    { label: "Prosperity Score", render: (row) => row.prosperityScore },
+    { label: "PIL Aggregate", render: (row) => row.pilAggregate },
+    { label: "Has Development Strategy", render: (row) => row.hasDevelopmentStrategy ? "Yes" : "No" },
+    { label: "Strategy Level", render: (row) => row.strategyLevel },
+    { label: "Link", render: (row) => row.link },
+  ];
+}
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
@@ -134,7 +154,7 @@ function escapeCsvValue(value: string | number | boolean | null) {
   return text;
 }
 
-function buildCsv(rows: SngDisplayRow[]) {
+function buildCsv(rows: SngDisplayRow[], exportColumns: ExportColumn[]) {
   const header = exportColumns.map((column) => escapeCsvValue(column.label)).join(",");
   const body = rows.map((row) =>
     exportColumns.map((column) => escapeCsvValue(column.render(row))).join(","),
@@ -188,7 +208,17 @@ function tertileMaxLabel(rows: ReturnType<typeof buildCurveRows>, index: number)
     : numberFormatter.format(row.population);
 }
 
-export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
+export function SngDisplaySection({
+  rows,
+  labels = defaultLabels,
+}: {
+  rows: SngDisplayRow[];
+  labels?: Partial<SngDisplayLabels>;
+}) {
+  const displayLabels = useMemo(
+    () => ({ ...defaultLabels, ...labels }),
+    [labels],
+  );
   const { isDark } = useTheme();
   const [sort, setSort] = useState<SortState>({
     key: "population",
@@ -198,6 +228,8 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
   const textColor = isDark ? "#edf4f6" : "#18252c";
   const gridColor = isDark ? "rgba(205,225,233,0.1)" : "rgba(24,37,44,0.08)";
   const chartSurface = isDark ? "rgba(22,32,38,0.96)" : "#ffffff";
+  const tableColumns = useMemo(() => buildTableColumns(displayLabels), [displayLabels]);
+  const exportColumns = useMemo(() => buildExportColumns(displayLabels), [displayLabels]);
 
   const filteredRows = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -212,7 +244,7 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
         return value !== null && String(value).toLowerCase().includes(query);
       }),
     );
-  }, [rows, searchQuery]);
+  }, [exportColumns, rows, searchQuery]);
 
   const sortedRows = useMemo(() => {
     return [...filteredRows].sort((left, right) => compareValues(left, right, sort));
@@ -231,12 +263,12 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
   }
 
   function downloadTable() {
-    const csv = buildCsv(rows);
+    const csv = buildCsv(rows, exportColumns);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "nepal-sng-municipality-metrics.csv";
+    link.download = displayLabels.csvFileName;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -249,13 +281,13 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
         <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h3 className="text-xl font-semibold text-[var(--foreground)]">
-              Population distribution by municipality
+              Population distribution by {displayLabels.lowerSingular.toLowerCase()}
             </h3>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-[var(--muted-foreground)]">
-            Municipalities are ranked from smallest to largest population and plotted
+            {displayLabels.lowerPlural} are ranked from smallest to largest population and plotted
             against cumulative population share. Tertile guides separate the reference
-            groups used for small, medium, and large municipality analysis.
+            groups used for small, medium, and large {displayLabels.lowerSingular.toLowerCase()} analysis.
           </p>
         </div>
 
@@ -278,7 +310,7 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
                   marker: { color: "#6375ff", size: 6 },
                   line: { color: "#6375ff", width: 3 },
                   hovertemplate:
-                    "Municipality: %{text}<br>Province: %{customdata[0]}<br>Rank: %{x}<br>Population: %{customdata[1]:,}<br>Cumulative share: %{customdata[2]:.2f}<extra></extra>",
+                    `${displayLabels.lowerSingular}: %{text}<br>${displayLabels.higherSingular}: %{customdata[0]}<br>Rank: %{x}<br>Population: %{customdata[1]:,}<br>Cumulative share: %{customdata[2]:.2f}<extra></extra>`,
                 },
               ]}
               layout={{
@@ -383,15 +415,15 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
         <div className="flex flex-col gap-3 border-b border-[var(--border-soft)] p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <h3 className="text-xl font-semibold text-[var(--foreground)]">
-              Municipality metrics
+              {displayLabels.lowerSingular} metrics
             </h3>
             <label className="relative w-full sm:w-[18rem]">
-              <span className="sr-only">Search municipality metrics</span>
+              <span className="sr-only">Search {displayLabels.lowerSingular.toLowerCase()} metrics</span>
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Filter municipalities"
+                placeholder={`Filter ${displayLabels.lowerPlural.toLowerCase()}`}
                 className="h-10 w-full rounded-full border border-[var(--border-soft)] bg-white px-4 text-sm text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--accent)]"
               />
             </label>
@@ -489,7 +521,7 @@ export function SngDisplaySection({ rows }: { rows: SngDisplayRow[] }) {
                     colSpan={tableColumns.length + 1}
                     className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]"
                   >
-                    No municipality metrics match your search.
+                    No {displayLabels.lowerSingular.toLowerCase()} metrics match your search.
                   </td>
                 </tr>
               )}

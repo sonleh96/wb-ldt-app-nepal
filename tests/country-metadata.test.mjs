@@ -19,7 +19,7 @@ test("Zambia exposes public country-page metadata and district/province labels",
   );
   assert.equal(
     country?.planningDocuments.message,
-    "Local planning documents will be added in a later release",
+    "Local/SNG planning documents are available for AI-assisted analysis where source links are loaded.",
   );
 });
 
@@ -39,6 +39,6 @@ test("Serbia exposes public country-page metadata and municipality/district labe
   );
   assert.equal(
     country?.planningDocuments.message,
-    "Local planning documents will be added in a later release",
+    "Local/SNG planning documents are available for AI-assisted analysis where source links are loaded.",
   );
 });
