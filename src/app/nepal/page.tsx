@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import Link from "next/link";
 
 import {
@@ -5,7 +8,7 @@ import {
   type SngDisplayRow,
 } from "@/components/nepal/sng-display-section";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getStaticAnalyticsDataset } from "@/lib/data/static-assets";
+import type { AnalyticsDataset } from "@/types/analytics";
 
 type HomeMetrics = {
   municipalityCount: number;
@@ -69,7 +72,8 @@ function StatusBadge({
 }
 
 async function getNepalHomeData(): Promise<NepalHomeData> {
-  const dataset = getStaticAnalyticsDataset("NPL");
+  const datasetPath = path.join(process.cwd(), "src/generated/analytics-data.json");
+  const dataset = JSON.parse(await readFile(datasetPath, "utf8")) as AnalyticsDataset;
 
   const municipalityCount = dataset.municipalities.length;
   const provinceCount = new Set(

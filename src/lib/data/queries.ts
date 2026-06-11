@@ -1,5 +1,8 @@
 import "server-only";
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import { cache } from "react";
 
 import type {
@@ -13,10 +16,6 @@ import {
   type CountryCode,
 } from "@/lib/countries";
 import { scoreComponentIndicatorMappings } from "@/lib/data/labels";
-import {
-  getStaticAnalyticsDataset,
-  getStaticMapFeatureCollection,
-} from "@/lib/data/static-assets";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   AnalyticsDataset,
@@ -219,11 +218,17 @@ async function loadLocalPlanCandidatesForSelection(
 }
 
 const loadLocalAnalyticsFallback = cache(async (countryCode: CountryCode): Promise<AnalyticsDataset> => {
-  return getStaticAnalyticsDataset(countryCode);
+  const country = resolveCountry(countryCode);
+  const filePath = path.join(process.cwd(), country.fallbackDataPath);
+  const raw = await readFile(filePath, "utf8");
+  return JSON.parse(raw) as AnalyticsDataset;
 });
 
 const loadMapFeatureCollection = cache(async (countryCode: CountryCode): Promise<MapFeatureCollection> => {
-  return getStaticMapFeatureCollection(countryCode);
+  const country = resolveCountry(countryCode);
+  const filePath = path.join(process.cwd(), country.mapDataPath);
+  const raw = await readFile(filePath, "utf8");
+  return JSON.parse(raw) as MapFeatureCollection;
 });
 
 const loadSupabaseBaseData = cache(async (countryCode: CountryCode) => {
