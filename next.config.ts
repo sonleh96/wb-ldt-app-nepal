@@ -1,5 +1,14 @@
 import type { NextConfig } from "next";
 
+const analyticsFallbackFiles = [
+  "./src/generated/analytics-data.json",
+  "./src/generated/zambia/analytics-data.json",
+  "./src/generated/serbia/analytics-data.json",
+  "./public/data/nepal-municipalities.geojson",
+  "./public/data/zambia/municipalities.geojson",
+  "./public/data/serbia/municipalities.geojson",
+];
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -10,6 +19,10 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingIncludes: {
+    "/nepal": analyticsFallbackFiles,
+    "/zambia": analyticsFallbackFiles,
+    "/serbia": analyticsFallbackFiles,
+    "/[country]/analytics": analyticsFallbackFiles,
     "/api/ai/province-plan-context": [
       "./node_modules/@napi-rs/**/*",
       "./node_modules/pdf-parse/**/*",
