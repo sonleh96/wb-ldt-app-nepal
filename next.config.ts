@@ -15,6 +15,10 @@ const aiDocumentFiles = [
   "./node_modules/pdfjs-dist/**/*",
 ];
 
+const strategyInventoryFallbackFiles = [
+  "./public/data/serbia/strategy_inventory.sample.json",
+];
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -42,6 +46,7 @@ const nextConfig: NextConfig = {
       ...analyticsFallbackFiles,
       ...aiDocumentFiles,
     ],
+    "/serbia/strategy-inventory": strategyInventoryFallbackFiles,
   },
 };
 
