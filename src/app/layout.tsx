@@ -5,10 +5,6 @@ import { AppHeader } from "@/components/layout/app-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Local Development Tracker",
@@ -38,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html lang="en" suppressHydrationWarning className="font-sans">
       <body className="min-h-screen">
         <script dangerouslySetInnerHTML={{ __html: themeInitializer }} />
         <ThemeProvider>
