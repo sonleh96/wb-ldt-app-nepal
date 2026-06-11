@@ -11,6 +11,7 @@ import {
   buildCountryHomeModel,
   type CountryHomeGroup,
 } from "@/lib/country-home";
+import { getCountryLandingActions } from "@/lib/country-landing-actions";
 import type { Country } from "@/lib/countries";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { AnalyticsDataset } from "@/types/analytics";
@@ -294,6 +295,18 @@ export async function CountryLandingPage({ country }: { country: Country }) {
   const lowerSingularLabel = lowerFirst(lowerSingular);
   const lowerPluralLabel = lowerFirst(lowerPlural);
   const higherPluralLabel = lowerFirst(higherPlural);
+  const actions = getCountryLandingActions(country);
+  const leftActions = actions.filter((action) => action.align === "left");
+  const rightActions = actions.filter((action) => action.align === "right");
+
+  function actionClassName(variant: "primary" | "secondary") {
+    const baseClassName =
+      "inline-flex min-h-[58px] items-center justify-center rounded-full px-8 py-4 text-base font-medium transition-colors sm:min-w-[12rem]";
+
+    return variant === "primary"
+      ? `${baseClassName} bg-[var(--accent)] text-white shadow-[0_12px_28px_rgba(17,138,178,0.24)] transition-transform hover:-translate-y-0.5 hover:brightness-95`
+      : `${baseClassName} border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]`;
+  }
 
   return (
     <main className="flex flex-1 flex-col">
@@ -307,30 +320,29 @@ export async function CountryLandingPage({ country }: { country: Country }) {
             population and PIL indicators, and trace which planning documents are
             available for analysis.
           </p>
-          <div className="mt-12 flex flex-col gap-4 sm:flex-row">
-            <Link
-              href={`/${country.slug}/analytics`}
-              className="inline-flex min-h-[58px] items-center justify-center rounded-full bg-[var(--accent)] px-8 py-4 text-base font-medium text-white shadow-[0_12px_28px_rgba(17,138,178,0.24)] transition-transform hover:-translate-y-0.5 hover:brightness-95 sm:min-w-[12rem]"
-            >
-              <span className="flex flex-col items-center leading-tight">
-                <span>Analyze {lowerSingularLabel}</span>
-                <span>metrics</span>
-              </span>
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex min-h-[58px] items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-8 py-4 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-strong)] sm:min-w-[12rem]"
-            >
-              Compare countries
-            </Link>
-            {country.slug === "serbia" ? (
-              <Link
-                href="/serbia/strategy-inventory"
-                className="inline-flex min-h-[58px] items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-8 py-4 text-base font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-strong)] sm:min-w-[12rem]"
-              >
-                Strategy inventory
-              </Link>
-            ) : null}
+          <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              {leftActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className={actionClassName(action.variant)}
+                >
+                  {action.label}
+                </Link>
+              ))}
+            </div>
+            <div className="flex flex-col gap-4 sm:ml-auto sm:flex-row">
+              {rightActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className={actionClassName(action.variant)}
+                >
+                  {action.label}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
