@@ -1,3 +1,6 @@
+import Image from "next/image";
+
+import pilDiagram from "../../../images/PIL Diagram.png";
 import { canonicalLabelMappings, scoreLabelMappings } from "@/lib/data/labels";
 
 const indicatorSelection = [
@@ -114,6 +117,29 @@ export default function MethodologyPage() {
             Supabase-backed historical data model. The official score CSV is
             treated as authoritative in the app runtime.
           </p>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
+          Analytical architecture
+        </p>
+        <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
+          PIL framework diagram
+        </h2>
+        <p className="mt-4 max-w-4xl text-sm leading-8 text-[var(--muted-foreground)]">
+          The app uses the PIL structure to connect local indicator evidence,
+          planning context, and investment prioritization. The diagram below
+          summarizes how the analytical layers fit together before users move
+          into country-specific score exploration.
+        </p>
+        <div className="mt-6 rounded-[1.25rem] border border-[var(--border-soft)] bg-white p-4">
+          <Image
+            src={pilDiagram}
+            alt="PIL framework diagram linking planning evidence, investment logic, and local development outcomes"
+            className="h-auto w-full rounded-[1rem]"
+            priority
+          />
         </div>
       </section>
 

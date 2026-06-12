@@ -18,8 +18,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import gpbpLogo from "../../../images/gpbp_logo.webp";
-import ldtLogo from "../../../images/ldt-logo.webp";
+import gpbpLogo from "../../../images/gpb-logo.png";
+import ldtLogo from "../../../images/ldt-logo.png";
 import pimpamLogo from "../../../images/pimpam_logo.png";
 
 const navItems = [
@@ -65,7 +65,7 @@ export function AppHeader() {
               src={gpbpLogo}
               alt="Geospatial Planning & Budgeting Tools"
               priority
-              className="h-8 w-auto"
+              className="h-11 w-auto"
             />
             <span className="hidden max-w-[12.5rem] flex-col leading-tight xl:flex">
               <span>Geospatial Planning</span>
@@ -78,11 +78,8 @@ export function AppHeader() {
               src={ldtLogo}
               alt="Local Development Tracker"
               priority
-              className="h-10 w-auto"
+              className="h-12 w-auto"
             />
-            <span className="truncate text-base font-semibold leading-none text-[var(--foreground)] sm:text-lg">
-              Local Development Tracker
-            </span>
           </Link>
         </div>
 
