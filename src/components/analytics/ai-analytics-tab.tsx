@@ -138,6 +138,127 @@ function WorkflowProgressRail({ steps }: { steps: WorkflowStep[] }) {
   );
 }
 
+function WorkflowGuideCard({
+  unitName,
+  regionName,
+  scoreLabel,
+  localPlanUnitName,
+  localPlanAvailable,
+}: {
+  unitName: string;
+  regionName: string;
+  scoreLabel: string;
+  localPlanUnitName: string;
+  localPlanAvailable: boolean;
+}) {
+  const workflowGuidance = [
+    {
+      title: "Start with score evidence",
+      body: "Use component charts and the score narrative to understand what is strengthening or weakening the selected theme.",
+    },
+    {
+      title: "Ground the read in plans",
+      body: localPlanAvailable
+        ? "Load local/SNG and national plan context, then run alignment before generating SWOT or recommendations."
+        : "Run national plan context only. Local alignment, SWOT, and recommendations remain blocked until a local/SNG plan URL is available.",
+    },
+    {
+      title: "Add web context only when useful",
+      body: "Use web context for recent public information, but treat it as supplemental to the indicator and planning evidence.",
+    },
+    {
+      title: "Synthesize last",
+      body: "Generate SWOT and investment recommendations only after the evidence base is complete enough to support them.",
+    },
+  ];
+
+  return (
+    <section className="overflow-hidden rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] shadow-[0_14px_36px_rgba(39,62,71,0.06)]">
+      <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
+            Recommended workflow
+          </p>
+          <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+            Build the planning brief in evidence order
+          </h3>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--muted-foreground)]">
+            Run stages from diagnostic evidence to planning context, then synthesis.
+            This keeps AI outputs traceable and prevents recommendations from being generated before the source base is ready.
+          </p>
+
+          <ol className="mt-5 grid gap-3 md:grid-cols-2">
+            {workflowGuidance.map((item, index) => (
+              <li
+                key={item.title}
+                className="rounded-[1.1rem] border border-[var(--border-soft)] bg-[var(--surface)] p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-semibold text-white">
+                    {index + 1}
+                  </span>
+                  <h4 className="text-sm font-semibold text-[var(--foreground)]">
+                    {item.title}
+                  </h4>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-[var(--muted-foreground)]">
+                  {item.body}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <aside className="border-t border-[var(--border-soft)] bg-[var(--surface)] p-5 xl:border-l xl:border-t-0">
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
+            Current setup
+          </p>
+          <dl className="mt-4 space-y-4 text-sm">
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                Local unit
+              </dt>
+              <dd className="mt-1 font-medium text-[var(--foreground)]">
+                {unitName}
+              </dd>
+              <dd className="mt-1 text-[var(--muted-foreground)]">
+                {regionName}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                Score theme
+              </dt>
+              <dd className="mt-1 font-medium text-[var(--foreground)]">
+                {scoreLabel}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                Local/SNG plan
+              </dt>
+              <dd className="mt-2">
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                    localPlanAvailable
+                      ? "border-[#2b8a3e]/45 bg-[#2b8a3e]/12 text-[#2b8a3e]"
+                      : "border-[#c7923e]/45 bg-[#c7923e]/12 text-[#9a6400] dark:text-[#f4c15d]"
+                  }`}
+                >
+                  {localPlanAvailable ? "Ready for alignment" : "National context only"}
+                </span>
+              </dd>
+              <dd className="mt-2 text-[var(--muted-foreground)]">
+                Plan unit: {localPlanUnitName}
+              </dd>
+            </div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
 function getStringValue(value: unknown) {
   return typeof value === "string" ? value : null;
 }
@@ -323,6 +444,9 @@ export function AiAnalyticsTab({
   const hasSwot = stageResults.swot_analysis?.status === "completed";
   const isPlanningContextLoading = planningContextStages.some((stage) => loadingStages[stage]);
   const hasAnyPlanningContextResult = planningContextStages.some((stage) => stageResults[stage]);
+  const selectedScoreLabel =
+    ai.scoreOptions.find((option) => option.id === ai.selectedScoreId)?.label ??
+    ai.selectedScoreId;
 
   function getWorkflowState(
     stages: AiStageName[],
@@ -501,6 +625,14 @@ export function AiAnalyticsTab({
           </button>
         </form>
       </AiStageCard>
+
+      <WorkflowGuideCard
+        unitName={municipality.municipality}
+        regionName={municipality.province}
+        scoreLabel={selectedScoreLabel}
+        localPlanUnitName={ai.localPlanUnitName}
+        localPlanAvailable={ai.localPlanAvailable}
+      />
 
       <WorkflowProgressRail steps={workflowSteps} />
 
