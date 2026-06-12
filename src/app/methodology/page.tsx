@@ -4,83 +4,129 @@ import pilDiagram from "../../../images/PIL Diagram.png";
 import { canonicalLabelMappings, scoreLabelMappings } from "@/lib/data/labels";
 
 const indicatorSelection = [
-  "Expert review of municipal development signals relevant to prosperity, livability, and infrastructure.",
-  "Practical availability of data that can be processed consistently at municipality scale.",
-  "Ability to standardize raw indicators into score-ready series across a historical model.",
-  "Relevance to public comparison, map-based inspection, and future update cycles.",
+  "Relevance to local development outcomes that can inform public investment and planning dialogue.",
+  "Availability at a subnational scale that can be harmonized across countries and administrative systems.",
+  "Ability to convert raw measures into comparable 0-100 score series with transparent interpretation.",
+  "Coverage across the Prosperity, Infrastructure, and Livability dimensions of the PIL framework.",
 ];
 
 const pillars = [
   {
     title: "Prosperity",
     body:
-      "Prosperity focuses on economic activity and development intensity. In the current release, it is represented through nighttime luminosity, built area development, tourism intensity, and agricultural land-related measures.",
+      "Prosperity captures local economic activity, productive intensity, and development opportunity. In the current country releases, it draws heavily on nighttime luminosity, built-area development, tourism activity, and agriculture-related land signals where available.",
     items: [
-      "Nighttime luminosity as a proxy for energy use and economic intensity.",
-      "Per-capita and per-area luminosity measures for normalized comparison.",
-      "Built area development, tourism activity, and agricultural land signals.",
-    ],
-  },
-  {
-    title: "Livability",
-    body:
-      "Livability focuses on the environmental and human-development conditions that shape daily life. In the current release, it is driven directly by indicator scores rather than intermediate dimensions.",
-    items: [
-      "Air quality conditions.",
-      "Emissions and emissions per area.",
-      "Deforestation-related change signals.",
+      "Nighttime luminosity as a proxy for economic intensity and access to electricity-enabled activity.",
+      "Population- and area-normalized measures so dense urban centers and smaller local units can be compared more fairly.",
+      "Country-specific economic signals, such as tourism or agricultural land indicators, where they can be processed consistently.",
     ],
   },
   {
     title: "Infrastructure",
     body:
-      "Infrastructure focuses on service availability, connectivity, and physical-system resilience. It combines digital access, service accessibility, and transport climate-risk indicators.",
+      "Infrastructure measures the availability, reach, and resilience of systems that support local service delivery and connectivity. It combines digital access, service accessibility, transport networks, and climate-risk exposure where those data are available.",
     items: [
       "Broadband and mobile internet performance.",
-      "Key structure internet access and accessibility to health and school services.",
-      "Road and railway flood and heatwave risk indicators.",
+      "Accessibility to schools, health facilities, and key local services.",
+      "Road and railway exposure to flood, heat, and other climate-related hazards.",
+    ],
+  },
+  {
+    title: "Livability",
+    body:
+      "Livability reflects environmental and human-development conditions that shape daily life. The indicator set differs by country data availability, but it is designed to make environmental stress and quality-of-life signals visible at local scale.",
+    items: [
+      "Air quality and emissions indicators.",
+      "Land-cover, deforestation, or green-space signals where available.",
+      "Human-development access indicators that complement infrastructure and prosperity scores.",
     ],
   },
 ];
 
-const satelliteSources = [
-  "VIIRS Nighttime Day/Night Band Composites Version 1",
-  "ERA5 Hourly Reanalysis",
-  "Dynamic World V1",
-  "OpenWeatherMaps Air Pollution",
+const dataSources = [
+  {
+    title: "Satellite and environmental data",
+    items: [
+      "VIIRS nighttime lights for luminosity-based economic activity measures.",
+      "ERA5, OpenWeatherMaps, Climate Trace, and related climate or environmental datasets.",
+      "Dynamic World and other land-cover products for built-area, vegetation, and land-use signals.",
+    ],
+  },
+  {
+    title: "Geospatial and infrastructure data",
+    items: [
+      "Administrative boundary files aligned to the relevant local-government tiers for each country.",
+      "WorldPop and other gridded population sources for population aggregation and normalization.",
+      "OpenStreetMap, Openrouteservice, WRI Aqueduct, and related spatial datasets for accessibility, transport, and risk measures.",
+    ],
+  },
+  {
+    title: "Official and planning sources",
+    items: [
+      "National development plans, local strategies, budgets, and other planning documents where source links are available.",
+      "Official country data, partner data, and validated administrative references used to interpret local conditions.",
+      "Indicator metadata that records source provenance and interpretation notes for user review.",
+    ],
+  },
 ];
 
-const geospatialSources = [
-  "GADM 4.1 Level 2 Boundaries",
-  "WorldPop New Global 2 Population Data",
-  "OpenStreetMap and Openrouteservice",
-  "WRI Aqueduct Flood Hazard Maps Version 2",
-  "Climate Trace",
+const preprocessingSteps = [
+  {
+    title: "Boundary reconciliation",
+    body:
+      "Administrative names, identifiers, and geometries are harmonized so indicator tables, map boundaries, and planning-document records refer to the same local units.",
+  },
+  {
+    title: "Spatial aggregation",
+    body:
+      "Raster, vector, network, and point datasets are aggregated to the relevant local-government level. Raster values are summarized within boundaries; point and network features are spatially joined or measured by coverage, access, or exposure.",
+  },
+  {
+    title: "Normalization",
+    body:
+      "Indicators are normalized by population, area, or another appropriate denominator when raw totals would otherwise favor larger local units.",
+  },
+  {
+    title: "Temporal alignment",
+    body:
+      "Input data are assigned to annual releases where possible. When countries have multi-year releases, the same local-unit keys are preserved so users can compare trends over time.",
+  },
 ];
 
-const processingNotes = [
-  "Raster, vector, and point-based inputs are aggregated to municipality level through preprocessing pipelines before the app reads them.",
-  "Indicators are normalized where appropriate by population or area so municipalities of different sizes remain comparable.",
-  "Indicator values and scores are loaded to Supabase and exposed through a historical-ready data model even though only one year is currently available.",
-  "The frontend does not recompute the official score CSV; it reads stored scores and supporting component values directly.",
+const scoringSteps = [
+  "Raw indicator values are transformed into comparable score values on a 0-100 scale, where higher values represent stronger relative performance for that indicator unless explicitly documented otherwise.",
+  "Component scores are grouped under Prosperity, Infrastructure, and Livability according to the PIL framework.",
+  "Pillar scores use transparent equal-weight aggregation across available component scores unless a country-specific methodology states otherwise.",
+  "Missing component values are not imputed inside the public app; they are skipped in aggregation where the prepared score tables identify them as missing.",
+  "Published score tables are treated as the authoritative score source for maps, scatterplots, driver charts, and country landing-page summaries.",
 ];
 
-const limitations = {
-  data: [
-    "Only one historical year is currently loaded in the current release.",
-    "Boundary reconciliation is incomplete, so map coverage is limited to the intersection of analytics keys and boundary features.",
-    "Some indicators have sparse coverage and should be interpreted carefully when comparing municipalities.",
-  ],
-  methodological: [
-    "Equal-weight aggregation may not reflect every policy priority or local planning preference.",
-    "Municipality-level aggregation can hide within-municipality variation.",
-    "Cross-source differences in collection methods and resolution can affect comparability.",
-  ],
-  product: [
-    "The public implementation currently focuses on analytics and maps rather than AI-assisted recommendations.",
-    "The current release is read-only and does not yet include an automated public refresh workflow.",
-  ],
-};
+const limitations = [
+  {
+    title: "Data coverage",
+    items: [
+      "Not every indicator is available for every country, year, or local unit.",
+      "Open geospatial sources can be incomplete or unevenly updated across territories.",
+      "Planning-document coverage depends on whether source links are available and machine-readable.",
+    ],
+  },
+  {
+    title: "Spatial interpretation",
+    items: [
+      "Local-government averages can hide neighborhood-level variation.",
+      "Boundary changes, naming differences, and language differences can affect matching quality.",
+      "Maps and scores should be read as screening evidence, not as a substitute for project appraisal.",
+    ],
+  },
+  {
+    title: "Scoring interpretation",
+    items: [
+      "Equal weighting is transparent, but it may not reflect every sector priority or local policy preference.",
+      "A high score does not automatically mean a local unit has no investment needs; it indicates relative standing within the release.",
+      "Score results should be validated against local knowledge, sector diagnostics, and official planning processes.",
+    ],
+  },
+];
 
 export default function MethodologyPage() {
   return (
@@ -90,14 +136,13 @@ export default function MethodologyPage() {
           Methodology
         </p>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--foreground)]">
-          Data sources, processing methods, and analytical framework
+          Indicator logic, data processing, and score calculation
         </h1>
         <p className="mt-5 max-w-4xl text-base leading-8 text-[var(--muted-foreground)]">
-          This page follows the structure of the reference methodology section
-          but is rewritten for the current public analytics scope. It explains
-          how municipality-level indicators are assembled, standardized, and
-          exposed through the app without carrying over Serbia-specific or
-          Western Balkans-specific content.
+          The Local Development Tracker turns geospatial, environmental, infrastructure,
+          and planning data into comparable local-government indicators. This page explains
+          how indicators are selected, processed, normalized, and aggregated into the
+          Prosperity, Infrastructure, and Livability scores used throughout the app.
         </p>
       </section>
 
@@ -105,17 +150,16 @@ export default function MethodologyPage() {
         <h2 className="text-2xl font-semibold text-[var(--foreground)]">Overview</h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            The Local Development Tracker provides a municipality-level
-            framework for comparing development conditions across three core
-            pillars: Prosperity, Livability, and Infrastructure. The current
-            release emphasizes public exploration through maps, scatterplots,
-            score drivers, and indicator metadata.
+            The methodology is designed for country replication. Each country keeps its own
+            administrative labels and planning context, while the analytical logic stays
+            consistent: collect local indicators, harmonize them to the relevant subnational
+            units, convert them into comparable scores, and expose the results for maps,
+            scatterplots, driver analysis, and planning review.
           </p>
           <p>
-            The methodology combines geospatial and tabular indicators,
-            preprocessing pipelines, canonical label mappings, and a
-            Supabase-backed historical data model. The official score CSV is
-            treated as authoritative in the app runtime.
+            The framework is intentionally transparent. Users should be able to see the
+            indicator source, understand how raw data becomes a score, and interpret the
+            result as screening evidence for further validation.
           </p>
         </div>
       </section>
@@ -128,15 +172,14 @@ export default function MethodologyPage() {
           PIL framework diagram
         </h2>
         <p className="mt-4 max-w-4xl text-sm leading-8 text-[var(--muted-foreground)]">
-          The app uses the PIL structure to connect local indicator evidence,
-          planning context, and investment prioritization. The diagram below
-          summarizes how the analytical layers fit together before users move
-          into country-specific score exploration.
+          The PIL framework organizes local development evidence around Prosperity,
+          Infrastructure, and Livability. The diagram shows how indicator evidence can
+          be connected to planning interpretation and investment prioritization.
         </p>
         <div className="mt-6 rounded-[1.25rem] border border-[var(--border-soft)] bg-white p-4">
           <Image
             src={pilDiagram}
-            alt="PIL framework diagram linking planning evidence, investment logic, and local development outcomes"
+            alt="PIL framework diagram linking local development indicators to planning and investment logic"
             className="h-auto w-full rounded-[1rem]"
             priority
           />
@@ -145,25 +188,19 @@ export default function MethodologyPage() {
 
       <section className="rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
         <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-          Indicator Selection and Framework
+          Indicator Selection Logic
         </h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            The current release uses a pillar-based framework to assess
-            municipal development conditions and priorities. Indicators were
-            selected to support a practical public analytics product while
-            remaining grounded in available municipal-scale data.
+            Indicators are selected to balance policy relevance with practical data coverage.
+            The aim is not to include every possible local development measure, but to build
+            a coherent evidence base that can be maintained and compared across local units.
           </p>
           <ul className="space-y-2 pl-5">
             {indicatorSelection.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <p>
-            Unlike the reference app, the current score structure does not use
-            intermediate dimensions. Indicators contribute directly to the
-            three pillars through their stored component scores.
-          </p>
         </div>
       </section>
 
@@ -189,107 +226,79 @@ export default function MethodologyPage() {
       </section>
 
       <section className="rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
-        <h2 className="text-2xl font-semibold text-[var(--foreground)]">Data Sources</h2>
-        <div className="mt-5 space-y-6 text-sm leading-8 text-[var(--muted-foreground)]">
-          <p>
-            The current release integrates multiple public and global data
-            sources to support scalable municipality-level analysis. Source
-            links are also attached directly to indicators within the
-            application.
-          </p>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
+        <h2 className="text-2xl font-semibold text-[var(--foreground)]">Data Acquisition</h2>
+        <p className="mt-5 max-w-4xl text-sm leading-8 text-[var(--muted-foreground)]">
+          The LDT combines scalable global datasets with country-specific sources where
+          available. Each source is selected for its relevance to local development, spatial
+          coverage, and ability to be processed into local-government units.
+        </p>
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          {dataSources.map((sourceGroup) => (
+            <article
+              key={sourceGroup.title}
+              className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5"
+            >
               <h3 className="text-base font-semibold text-[var(--foreground)]">
-                Satellite and environmental sources
+                {sourceGroup.title}
               </h3>
-              <ul className="mt-4 space-y-2 pl-5">
-                {satelliteSources.map((item) => (
+              <ul className="mt-4 space-y-2 pl-5 text-sm leading-7 text-[var(--muted-foreground)]">
+                {sourceGroup.items.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </article>
-
-            <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
-              <h3 className="text-base font-semibold text-[var(--foreground)]">
-                Geospatial and infrastructure sources
-              </h3>
-              <ul className="mt-4 space-y-2 pl-5">
-                {geospatialSources.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-          </div>
-
-          <div className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
-            <h3 className="text-base font-semibold text-[var(--foreground)]">
-              Data coverage and resolution
-            </h3>
-            <ul className="mt-4 space-y-2 pl-5">
-              <li>
-                Geographic resolution: municipality level across the current
-                release.
-              </li>
-              <li>
-                Temporal model: historical-ready, with the current public
-                release containing one year.
-              </li>
-              <li>
-                Update model: designed for later automated refreshes after the
-                current manual ingestion phase.
-              </li>
-            </ul>
-          </div>
+          ))}
         </div>
       </section>
 
       <section className="rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
         <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-          Data Processing and Integration
+          Preprocessing and Integration
+        </h2>
+        <p className="mt-5 max-w-4xl text-sm leading-8 text-[var(--muted-foreground)]">
+          Raw data are prepared before they are exposed in the app. The preprocessing
+          pipeline converts heterogeneous input formats into consistent local-unit records
+          that can be compared, mapped, and summarized.
+        </p>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {preprocessingSteps.map((step) => (
+            <article
+              key={step.title}
+              className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5"
+            >
+              <h3 className="text-base font-semibold text-[var(--foreground)]">
+                {step.title}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted-foreground)]">
+                {step.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
+        <h2 className="text-2xl font-semibold text-[var(--foreground)]">
+          Score Calculation and Aggregation
         </h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            Raw raster, vector, and tabular inputs are processed outside the
-            frontend before being loaded into Supabase. The app itself is a
-            query and visualization layer over already prepared municipality
-            data.
+            Score calculation follows a simple interpretation rule: local units are compared
+            against other local units in the same release, and higher scores indicate stronger
+            relative performance for the selected indicator or pillar unless the metadata says
+            otherwise.
           </p>
           <ul className="space-y-2 pl-5">
-            {processingNotes.map((item) => (
+            {scoringSteps.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <p>
-            Canonical label mappings are applied during ingestion to harmonize
-            raw column names with the product-facing indicator labels used
-            across charts, metadata panels, and documentation.
-          </p>
-        </div>
-      </section>
-
-      <section className="rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
-        <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-          Scoring and Aggregation
-        </h2>
-        <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
-          <p>
-            The current release follows the official score CSV. Each pillar
-            score is an equal-weight arithmetic mean of its component indicator
-            scores, with null components skipped where data is missing.
-          </p>
-          <p>
-            In practice, that means the app does not infer new weights or apply
-            a second scoring model at runtime. It reads stored component scores,
-            pillar scores, and supporting municipality context directly from the
-            database.
-          </p>
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
             <h3 className="text-base font-semibold text-[var(--foreground)]">
-              Admin column standardization
+              Administrative field standardization
             </h3>
             <div className="mt-4 space-y-3 text-sm text-[var(--muted-foreground)]">
               {canonicalLabelMappings.map((mapping) => (
@@ -308,7 +317,7 @@ export default function MethodologyPage() {
 
           <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
             <h3 className="text-base font-semibold text-[var(--foreground)]">
-              Score column standardization
+              Score field standardization
             </h3>
             <div className="mt-4 space-y-3 text-sm text-[var(--muted-foreground)]">
               {scoreLabelMappings.map((mapping) => (
@@ -329,62 +338,24 @@ export default function MethodologyPage() {
 
       <section className="rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
         <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-          Current Analytical Scope
-        </h2>
-        <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
-          <p>
-            The reference product includes an AI-assisted decision-support
-            layer. The current implementation does not expose that workflow.
-            This release focuses on public analytics, including map
-            comparison, scatter-based municipality comparison, score-driver
-            inspection, and source transparency.
-          </p>
-          <p>
-            If an AI-assisted recommendation layer is introduced later, it
-            should remain explicitly traceable to the underlying indicator and
-            score evidence rather than replacing the analytical views already in
-            the app.
-          </p>
-        </div>
-      </section>
-
-      <section className="rounded-[1.75rem] border border-[var(--border-soft)] bg-white/80 p-8">
-        <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-          Limitations and Considerations
+          Limitations and Interpretation
         </h2>
         <div className="mt-5 grid gap-6 lg:grid-cols-3">
-          <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
-            <h3 className="text-base font-semibold text-[var(--foreground)]">
-              Data limitations
-            </h3>
-            <ul className="mt-4 space-y-2 pl-5 text-sm leading-7 text-[var(--muted-foreground)]">
-              {limitations.data.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
-            <h3 className="text-base font-semibold text-[var(--foreground)]">
-              Methodological considerations
-            </h3>
-            <ul className="mt-4 space-y-2 pl-5 text-sm leading-7 text-[var(--muted-foreground)]">
-              {limitations.methodological.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5">
-            <h3 className="text-base font-semibold text-[var(--foreground)]">
-              Product considerations
-            </h3>
-            <ul className="mt-4 space-y-2 pl-5 text-sm leading-7 text-[var(--muted-foreground)]">
-              {limitations.product.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
+          {limitations.map((limitation) => (
+            <article
+              key={limitation.title}
+              className="rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5"
+            >
+              <h3 className="text-base font-semibold text-[var(--foreground)]">
+                {limitation.title}
+              </h3>
+              <ul className="mt-4 space-y-2 pl-5 text-sm leading-7 text-[var(--muted-foreground)]">
+                {limitation.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -394,19 +365,13 @@ export default function MethodologyPage() {
         </h2>
         <div className="mt-5 space-y-4 text-sm leading-8 text-[var(--muted-foreground)]">
           <p>
-            Indicator descriptions are grounded in the metadata workbook, and
-            source links are surfaced directly in the application’s indicator
-            metadata panel. The charting and map views should be read as
-            decision-support tools for comparison and prioritization rather
-            than as final policy prescriptions.
-          </p>
-          <p>
-            For implementation details, use the resources and release notes
-            pages alongside this methodology page.
+            Indicator descriptions, source references, and interpretation notes are surfaced
+            through the indicator metadata views in the analytics workspace. Users should read
+            charts and scores as decision-support evidence for discussion, validation, and
+            prioritization rather than as final project-selection decisions.
           </p>
         </div>
       </section>
-
     </main>
   );
 }
