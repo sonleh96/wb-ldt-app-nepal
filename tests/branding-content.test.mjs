@@ -8,6 +8,18 @@ test("branding assets and PIL diagram are wired into the app", async () => {
     access("images/ldt-logo.png"),
     access("images/pimpam_logo.png"),
     access("images/PIL Diagram.png"),
+    access("images/about-ldt-world-bank-logo.png"),
+    access("images/about-ldt-pimpam-logo.png"),
+    access("images/about-ldt-gpb-tools-logo.png"),
+    access("images/about-ldt-size-distribution.png"),
+    access("images/about-ldt-3d-pil-ranking.png"),
+    access("images/about-ldt-2d-quadrant.png"),
+    access("images/about-ldt-strategy-availability.png"),
+    access("images/about-ldt-population-distribution.png"),
+    access("images/about-ldt-ai-swot.png"),
+    access("images/about-ldt-release-0-7.png"),
+    access("images/about-ldt-ai-recommendations.png"),
+    access("images/about-ldt-project-selection.png"),
   ]);
 
   const header = await readFile("src/components/layout/app-header.tsx", "utf8");
@@ -31,12 +43,14 @@ test("global typography follows the requested Fira Sans and Inter stack", async 
   assert.match(css, /--font-heading: "Fira Sans", "Trebuchet MS", sans-serif;/);
 });
 
-test("about page follows the GPB PIA quickstart content", async () => {
+test("about page follows the GPB LDT briefing content", async () => {
   const about = await readFile("src/app/about/page.tsx", "utf8");
 
-  assert.match(about, /Public Infrastructure Access QuickStart/);
-  assert.match(about, /The problem averages hide/);
-  assert.match(about, /The method: four steps, any country/);
+  assert.match(about, /Local Development Tracker QuickStart/);
+  assert.match(about, /The sub-national challenge/);
+  assert.match(about, /The method: two layers, any country/);
   assert.match(about, /Replicability: adding the next country/);
-  assert.match(about, /Working with sector teams/);
+  assert.match(about, /Selected country findings/);
+  assert.match(about, /about-ldt-ai-recommendations\.png/);
+  assert.match(about, /about-ldt-project-selection\.png/);
 });
