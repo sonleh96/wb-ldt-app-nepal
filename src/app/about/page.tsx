@@ -9,7 +9,6 @@ import pilRankingImage from "../../../images/about-ldt-3d-pil-ranking.png";
 import pimpamLogo from "../../../images/about-ldt-pimpam-logo.png";
 import populationDistributionImage from "../../../images/about-ldt-population-distribution.png";
 import projectSelectionImage from "../../../images/about-ldt-project-selection.png";
-import releaseImage from "../../../images/about-ldt-release-0-7.png";
 import sizeDistributionImage from "../../../images/about-ldt-size-distribution.png";
 import strategyAvailabilityImage from "../../../images/about-ldt-strategy-availability.png";
 import worldBankLogo from "../../../images/about-ldt-world-bank-logo.png";
@@ -364,15 +363,6 @@ export default function AboutPage() {
               </p>
             </article>
           ))}
-        </div>
-        <div className="mt-6">
-          <FigureCard
-            figure={{
-              src: releaseImage,
-              alt: "LDT release 0.7 application screenshot",
-              caption: "Figure 2. LDT Release 0.7, https://ldt.pim-pam.net/",
-            }}
-          />
         </div>
         <p className="mt-5 rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface)] p-5 text-sm leading-8 text-[var(--muted-foreground)]">
           The central principle is simple: use the LDT to make local

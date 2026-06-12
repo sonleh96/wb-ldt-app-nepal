@@ -17,7 +17,6 @@ test("branding assets and PIL diagram are wired into the app", async () => {
     access("images/about-ldt-strategy-availability.png"),
     access("images/about-ldt-population-distribution.png"),
     access("images/about-ldt-ai-swot.png"),
-    access("images/about-ldt-release-0-7.png"),
     access("images/about-ldt-ai-recommendations.png"),
     access("images/about-ldt-project-selection.png"),
   ]);
@@ -53,4 +52,6 @@ test("about page follows the GPB LDT briefing content", async () => {
   assert.match(about, /Selected country findings/);
   assert.match(about, /about-ldt-ai-recommendations\.png/);
   assert.match(about, /about-ldt-project-selection\.png/);
+  assert.doesNotMatch(about, /Release 0\.7/);
+  assert.doesNotMatch(about, /ldt\.pim-pam\.net/);
 });
