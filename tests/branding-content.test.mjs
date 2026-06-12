@@ -46,6 +46,7 @@ test("about page follows the GPB LDT briefing content", async () => {
   assert.match(about, /lg:whitespace-nowrap/);
   assert.match(about, /The sub-national challenge/);
   assert.match(about, /The method: two layers, any country/);
+  assert.match(about, /Figure 1\. Panel of GPB LDT country demo highlights/);
   assert.match(about, /Replicability: adding the next country/);
   assert.match(about, /Selected country findings/);
   assert.match(about, /about-ldt-ai-recommendations\.png/);

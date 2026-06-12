@@ -301,7 +301,7 @@ export default function AboutPage() {
         </ol>
       </SectionCard>
 
-      <SectionCard title="Figure 1. Panel of GPB LDT highlights">
+      <SectionCard title="Figure 1. Panel of GPB LDT country demo highlights">
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           {highlightFigures.map((figure, index) => (
             <FigureCard key={figure.caption} figure={figure} priority={index < 2} />
