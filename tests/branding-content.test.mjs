@@ -8,9 +8,6 @@ test("branding assets and PIL diagram are wired into the app", async () => {
     access("images/ldt-logo.png"),
     access("images/pimpam_logo.png"),
     access("images/PIL Diagram.png"),
-    access("images/about-ldt-world-bank-logo.png"),
-    access("images/about-ldt-pimpam-logo.png"),
-    access("images/about-ldt-gpb-tools-logo.png"),
     access("images/about-ldt-size-distribution.png"),
     access("images/about-ldt-3d-pil-ranking.png"),
     access("images/about-ldt-2d-quadrant.png"),
@@ -55,4 +52,7 @@ test("about page follows the GPB LDT briefing content", async () => {
   assert.match(about, /about-ldt-project-selection\.png/);
   assert.doesNotMatch(about, /Release 0\.7/);
   assert.doesNotMatch(about, /ldt\.pim-pam\.net/);
+  assert.doesNotMatch(about, /about-ldt-world-bank-logo\.png/);
+  assert.doesNotMatch(about, /about-ldt-pimpam-logo\.png/);
+  assert.doesNotMatch(about, /about-ldt-gpb-tools-logo\.png/);
 });

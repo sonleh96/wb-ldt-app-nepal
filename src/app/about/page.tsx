@@ -3,15 +3,12 @@ import type { ReactNode } from "react";
 
 import aiRecommendationsImage from "../../../images/about-ldt-ai-recommendations.png";
 import aiSwotImage from "../../../images/about-ldt-ai-swot.png";
-import gpbToolsLogo from "../../../images/about-ldt-gpb-tools-logo.png";
 import pilQuadrantImage from "../../../images/about-ldt-2d-quadrant.png";
 import pilRankingImage from "../../../images/about-ldt-3d-pil-ranking.png";
-import pimpamLogo from "../../../images/about-ldt-pimpam-logo.png";
 import populationDistributionImage from "../../../images/about-ldt-population-distribution.png";
 import projectSelectionImage from "../../../images/about-ldt-project-selection.png";
 import sizeDistributionImage from "../../../images/about-ldt-size-distribution.png";
 import strategyAvailabilityImage from "../../../images/about-ldt-strategy-availability.png";
-import worldBankLogo from "../../../images/about-ldt-world-bank-logo.png";
 
 type Figure = {
   src: StaticImageData;
@@ -194,12 +191,7 @@ export default function AboutPage() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 pb-16 pt-10 sm:px-8 lg:px-12">
       <section className="rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-8 shadow-[0_18px_50px_rgba(39,62,71,0.08)]">
-        <div className="flex flex-wrap items-center gap-5 rounded-[1.25rem] border border-[var(--border-soft)] bg-white/70 p-4">
-          <Image src={worldBankLogo} alt="The World Bank" className="h-10 w-auto" priority />
-          <Image src={pimpamLogo} alt="PIM-PAM" className="h-12 w-auto" priority />
-          <Image src={gpbToolsLogo} alt="GPB Tools" className="h-14 w-auto" priority />
-        </div>
-        <p className="mt-8 text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
+        <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
           pim-pam.net Geospatial Planning and Budgeting Tools
         </p>
         <h1 className="mt-4 max-w-5xl text-4xl font-bold tracking-tight text-[var(--foreground)] sm:text-[2.8rem] lg:whitespace-nowrap lg:text-[3.25rem]">
