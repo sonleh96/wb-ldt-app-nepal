@@ -365,7 +365,7 @@ function StrategyInventoryTable({
             </h2>
           </div>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Showing {formatNumber(sortedRows.length)} of {formatNumber(records.length)} sample records
+            Showing {formatNumber(sortedRows.length)} of {formatNumber(records.length)} inventory records
           </p>
         </div>
 
@@ -631,8 +631,8 @@ function FollowUpPanel({
       {summary.unlisted_missing_lsg_count > 0 ? (
         <div className="mt-5 rounded-[1.2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-4 text-sm leading-7 text-[var(--muted-foreground)]">
           {formatNumber(summary.unlisted_missing_lsg_count)} expected Serbian LSGs are not
-          represented in the current sample inventory yet. Add the production master list
-          to convert this placeholder count into named follow-up rows.
+          represented in the current inventory yet. Add the validated master list
+          to convert this count into named follow-up rows.
         </div>
       ) : null}
 
