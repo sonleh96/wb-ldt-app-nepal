@@ -46,6 +46,7 @@ test("about page follows the GPB LDT briefing content", async () => {
   const about = await readFile("src/app/about/page.tsx", "utf8");
 
   assert.match(about, /Local Development Tracker QuickStart/);
+  assert.match(about, /lg:whitespace-nowrap/);
   assert.match(about, /The sub-national challenge/);
   assert.match(about, /The method: two layers, any country/);
   assert.match(about, /Replicability: adding the next country/);

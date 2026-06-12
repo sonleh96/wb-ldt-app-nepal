@@ -202,7 +202,7 @@ export default function AboutPage() {
         <p className="mt-8 text-xs uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
           pim-pam.net Geospatial Planning and Budgeting Tools
         </p>
-        <h1 className="mt-4 max-w-5xl text-4xl font-bold tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
+        <h1 className="mt-4 max-w-5xl text-4xl font-bold tracking-tight text-[var(--foreground)] sm:text-[2.8rem] lg:whitespace-nowrap lg:text-[3.25rem]">
           Local Development Tracker QuickStart
         </h1>
         <p className="mt-3 text-sm font-medium text-[var(--muted-foreground)]">
