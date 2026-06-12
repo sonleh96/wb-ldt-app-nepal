@@ -4,6 +4,7 @@ import ausLogo from "../../images/aus_logo.webp";
 import euLogo from "../../images/eu_logo.webp";
 import swissLogo from "../../images/swiss_logo.webp";
 import wbLogo from "../../images/wb_logo.webp";
+import pilDiagram from "../../images/PIL Diagram.png";
 import { CountrySelector } from "@/components/home/country-selector";
 import nplAnalyticsData from "@/generated/analytics-data.json";
 import serbiaAnalyticsData from "@/generated/serbia/analytics-data.json";
@@ -90,6 +91,34 @@ export default function Home() {
             <CountrySelector />
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto mt-12 w-full max-w-7xl px-6 sm:px-8 lg:px-12">
+        <article className="overflow-hidden rounded-[1.7rem] border border-[var(--border-soft)] bg-white/78 p-5 shadow-[0_18px_45px_rgba(39,62,71,0.08)] sm:p-7">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
+                Public investment lens
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                From local evidence to investment decisions
+              </h2>
+            </div>
+            <p className="max-w-2xl text-sm leading-7 text-[var(--muted-foreground)]">
+              The PIL framework links local development conditions, planning evidence,
+              and investment prioritization so users can move from diagnostics to
+              practical public investment conversations.
+            </p>
+          </div>
+          <div className="mt-6 rounded-[1.25rem] border border-[var(--border-soft)] bg-white p-4">
+            <Image
+              src={pilDiagram}
+              alt="PIL framework diagram linking planning evidence, investment logic, and local development outcomes"
+              className="h-auto w-full rounded-[1rem]"
+              priority
+            />
+          </div>
+        </article>
       </section>
 
       <section className="mx-auto my-12 w-full max-w-7xl px-6 sm:px-8 lg:px-12">
