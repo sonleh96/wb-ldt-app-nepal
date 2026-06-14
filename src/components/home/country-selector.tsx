@@ -29,7 +29,10 @@ export function CountrySelector() {
   }
 
   return (
-    <div className="mt-4 w-full max-w-[48rem] rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-3 shadow-[0_14px_34px_rgba(39,62,71,0.07)] sm:p-4">
+    <div
+      id="country-workspaces"
+      className="mt-4 w-full max-w-[48rem] scroll-mt-28 rounded-[1.25rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] p-3 shadow-[0_14px_34px_rgba(39,62,71,0.07)] sm:p-4"
+    >
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-3 lg:flex-row lg:items-center"

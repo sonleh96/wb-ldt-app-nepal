@@ -5,6 +5,13 @@ import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "@/components/theme/theme-provider";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type ThemeToggleProps = {
+  className?: string;
+  labelClassName?: string;
+  iconClassName?: string;
+};
 
 function useHasHydrated() {
   return useSyncExternalStore(
@@ -14,7 +21,7 @@ function useHasHydrated() {
   );
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ className, labelClassName, iconClassName }: ThemeToggleProps) {
   const { isDark, toggleTheme } = useTheme();
   const hasHydrated = useHasHydrated();
   const label = hasHydrated
@@ -30,13 +37,22 @@ export function ThemeToggle() {
       variant="outline"
       size="lg"
       onClick={toggleTheme}
-      className="h-10 rounded-full border-[var(--border-soft)] bg-[var(--surface)] px-3 text-[var(--foreground)] hover:bg-[var(--surface-strong)]"
+      className={cn(
+        "h-10 rounded-full border-[var(--border-soft)] bg-[var(--surface)] px-3 text-[var(--foreground)] hover:bg-[var(--surface-strong)]",
+        className,
+      )}
       aria-label={label}
       title={label}
       aria-pressed={hasHydrated ? isDark : undefined}
     >
-      {hasHydrated && isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-      <span className="hidden text-sm font-medium xl:inline">{statusLabel}</span>
+      {hasHydrated && isDark ? (
+        <Sun aria-hidden="true" className={iconClassName} />
+      ) : (
+        <Moon aria-hidden="true" className={iconClassName} />
+      )}
+      <span className={cn("hidden text-sm font-medium xl:inline", labelClassName)}>
+        {statusLabel}
+      </span>
     </Button>
   );
 }

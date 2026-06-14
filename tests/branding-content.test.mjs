@@ -19,12 +19,14 @@ test("branding assets and PIL diagram are wired into the app", async () => {
   ]);
 
   const header = await readFile("src/components/layout/app-header.tsx", "utf8");
+  const suiteBranding = await readFile("src/components/layout/gpb-suite-branding.tsx", "utf8");
   const home = await readFile("src/app/page.tsx", "utf8");
   const methodology = await readFile("src/app/methodology/page.tsx", "utf8");
+  const layoutBranding = `${header}\n${suiteBranding}`;
 
-  assert.match(header, /images\/gpb-logo\.png/);
-  assert.match(header, /images\/ldt-logo\.png/);
-  assert.match(header, /images\/pimpam_logo\.png/);
+  assert.match(layoutBranding, /images\/gpb-logo\.png/);
+  assert.match(layoutBranding, /images\/ldt-logo\.png/);
+  assert.match(layoutBranding, /images\/pimpam_logo\.png/);
   assert.match(home, /PIL Diagram\.png/);
   assert.match(methodology, /PIL Diagram\.png/);
 });

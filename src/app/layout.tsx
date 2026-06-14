@@ -40,8 +40,16 @@ export default function RootLayout({
         <ThemeProvider>
           <TooltipProvider delay={250}>
             <div className="relative flex min-h-screen flex-col">
+              <a
+                href="#main-content"
+                className="sr-only fixed left-4 top-4 z-[100] rounded-sm bg-[var(--gpb-chrome-bg)] px-4 py-3 text-sm font-semibold text-[var(--gpb-chrome-active)] shadow-lg focus:not-sr-only focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--gpb-chrome-focus)]"
+              >
+                Skip to main content
+              </a>
               <AppHeader />
-              {children}
+              <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col focus:outline-none">
+                {children}
+              </div>
               <SiteFooter />
             </div>
           </TooltipProvider>

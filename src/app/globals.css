@@ -65,6 +65,12 @@
   --chart-series-muted: rgba(24, 37, 44, 0.62);
   --tooltip-bg: rgba(24, 37, 44, 0.96);
   --tooltip-foreground: #f8fbfc;
+  --gpb-chrome-bg: #021420;
+  --gpb-chrome-link: #c9d3ea;
+  --gpb-chrome-active: #ffffff;
+  --gpb-chrome-muted: rgba(201, 211, 234, 0.72);
+  --gpb-chrome-divider: rgba(201, 211, 234, 0.45);
+  --gpb-chrome-focus: #ffffff;
 }
 
 @theme inline {
