@@ -23,7 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import ldtLogo from "../../../images/ldt-logo.png";
+import ldtLogo from "../../../images/ldt-logo-dark.png";
 
 function isActivePath(pathname: string, href: string, exact?: boolean) {
   if (href.includes("#")) {
@@ -90,14 +90,12 @@ export function AppHeader() {
           className="flex min-w-0 items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--gpb-chrome-focus)]"
           aria-label="Local Development Tracker home"
         >
-          <span className="flex h-12 w-[11rem] items-center rounded-sm bg-white px-3 shadow-sm sm:w-[13rem]">
-            <Image
-              src={ldtLogo}
-              alt="Local Development Tracker"
-              priority
-              className="h-10 w-auto object-contain"
-            />
-          </span>
+          <Image
+            src={ldtLogo}
+            alt="Local Development Tracker"
+            priority
+            className="h-12 w-auto object-contain"
+          />
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 lg:flex">
@@ -136,14 +134,12 @@ export function AppHeader() {
             </SheetTrigger>
             <SheetContent className="w-[min(88vw,23rem)] border-[var(--gpb-chrome-divider)] bg-[var(--gpb-chrome-bg)] text-[var(--gpb-chrome-active)]">
               <SheetHeader className="gap-3 p-5">
-                <span className="flex h-12 w-[12.5rem] items-center rounded-sm bg-white px-3 shadow-sm">
-                  <Image
-                    src={ldtLogo}
-                    alt="Local Development Tracker"
-                    priority
-                    className="h-10 w-auto object-contain"
-                  />
-                </span>
+                <Image
+                  src={ldtLogo}
+                  alt="Local Development Tracker"
+                  priority
+                  className="h-12 w-auto object-contain"
+                />
                 <SheetTitle className="text-left text-[var(--gpb-chrome-active)]">
                   Local Development Tracker
                 </SheetTitle>

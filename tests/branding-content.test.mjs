@@ -5,7 +5,7 @@ import test from "node:test";
 test("branding assets and PIL diagram are wired into the app", async () => {
   await Promise.all([
     access("images/gpb-logo.png"),
-    access("images/ldt-logo.png"),
+    access("images/ldt-logo-dark.png"),
     access("images/pimpam_logo.png"),
     access("images/PIL Diagram.png"),
     access("images/about-ldt-size-distribution.png"),
@@ -25,7 +25,7 @@ test("branding assets and PIL diagram are wired into the app", async () => {
   const layoutBranding = `${header}\n${suiteBranding}`;
 
   assert.match(layoutBranding, /images\/gpb-logo\.png/);
-  assert.match(layoutBranding, /images\/ldt-logo\.png/);
+  assert.match(layoutBranding, /images\/ldt-logo-dark\.png/);
   assert.match(layoutBranding, /images\/pimpam_logo\.png/);
   assert.match(home, /PIL Diagram\.png/);
   assert.match(methodology, /PIL Diagram\.png/);

@@ -9,7 +9,7 @@ import {
   countryWorkspaceLinks,
   footerNavItems,
 } from "@/components/layout/site-links";
-import ldtLogo from "../../../images/ldt-logo.png";
+import ldtLogo from "../../../images/ldt-logo-dark.png";
 
 const footerLinkClass =
   "inline-flex min-h-9 items-center text-sm font-semibold text-[var(--gpb-chrome-link)] transition-colors duration-200 hover:text-[var(--gpb-chrome-active)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--gpb-chrome-focus)]";
@@ -24,13 +24,11 @@ export function SiteFooter() {
             className="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--gpb-chrome-focus)]"
             aria-label="Local Development Tracker home"
           >
-            <span className="flex h-14 w-[14rem] items-center rounded-sm bg-white px-3 shadow-sm">
-              <Image
-                src={ldtLogo}
-                alt="Local Development Tracker"
-                className="h-11 w-auto object-contain"
-              />
-            </span>
+            <Image
+              src={ldtLogo}
+              alt="Local Development Tracker"
+              className="h-14 w-auto object-contain"
+            />
           </Link>
           <p className="mt-6 max-w-md text-base font-medium leading-7 text-[var(--gpb-chrome-link)]">
             Municipality-level analytics for comparing local development
